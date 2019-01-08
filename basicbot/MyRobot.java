@@ -4,31 +4,25 @@ package bc19;
 
 public class MyRobot extends BCAbstractRobot {
 
-    int x_LCG;
-
-    /**
-     * Seeds the Linear Congruential Generator.
-     * If this isn't called before fetching random numbers, the seed effectively
-     * defaults to 0. Recommended usage is to seed with unit ID on turn 1.
-     */
-    public void seedLCG(int val) {
-        x_LCG = val;
-    }
-
-    /**
-     * Generates a random 31-bit number, advancing state of the LCG. Note that
-     * x_LCG will always hold the value of the most recently generated random number.
-     * If not seeded before this is called, the seed effectively defaults to 0.
-     */
-    public int getRandLCG() {
-        return (x_LCG = ((x_LCG * 1103515245) + 12345) & 0x7fffffff);
-    }
-
+    public int mcX = -1; // my castle
+    public int mcY = -1;
 
     public Action turn() {
-        if (me.turn == 1) seedLCG(17 + me.id);
+        if (me.turn == 1) {
 
-        // mRand = me.id + System.nanoTime();
+            // initialization stuff
+            for (Robot r : getVisibleRobots()) {
+                if (getDist(me.x, me.y, r.x, r.y) == 1 && r.team == me.team && r.unit == SPECS.CASTLE) {
+                    mcX = r.x;
+                    mcY = r.y;
+                    break;
+                }
+            }
+            if (mcX == -1) {
+                log("COULD NOT LOCATE HOME CASTLE??");
+            }
+
+        }
         if (me.unit == SPECS.CASTLE) {
             return castleLogic();
         } else if (me.unit == SPECS.PILGRIM) {
@@ -41,30 +35,196 @@ public class MyRobot extends BCAbstractRobot {
 
     public int bDir;
     public int[][] dirs = {{0,1},{1,0},{0,-1},{-1,0}};
-    public int[][][] sDirArr = {{{1,0},{1,0},{0,1}}, {{0,1},{0,1},{1,0}},
-                               {{0,1},{0,1},{-1,0}}, {{-1,0},{-1,0},{0,1}},
-                               {{-1,0},{-1,0},{0,-1}}, {{0,-1},{0,-1},{-1,0}},
-                               {{0,-1},{0,-1},{1,0}}, {{1,0},{1,0},{0,-1}}};
+    public int[][][] sDirArr = {{{1,0},{1,0},{0,1}}, {{1,0},{1,0},{0,-1}},
+                                {{0,1},{0,1},{1,0}}, {{0,1},{0,1},{-1,0}},
+                                {{-1,0},{-1,0},{0,1}}, {{-1,0},{-1,0},{0,-1}},
+                                {{0,-1},{0,-1},{1,0}}, {{0,-1},{0,-1},{-1,0}}};
+
+
 
     public Action crusaderLogic() {
         if (me.turn == 1) {
-            bDir = (int)(getRandLCG() % 4);
+            bDir = (int)(8 * Math.random());
         }
 
-        return move(sDirArr[bDir][me.turn % 3][0],
-                    sDirArr[bDir][me.turn % 3][1]);
+        Robot[] nearby = getVisibleRobots();
+        Robot nearestEnemy = null;
+        int nearestDist = -1;
+        for (Robot r : nearby) {
+            if (r.team != me.team) {
+                if (nearestEnemy == null || getDist(me.x, me.y, r.x, r.y) < nearestDist) {
+                    nearestEnemy = r;
+                    nearestDist = getDist(me.x, me.y, r.x, r.y);
+                }
+            }
+        }
 
-        // return move(dirs[(int)(mRand % 4)][0], dirs[(int)(mRand % 4)][1]);
-        //return null;
+        int[] tDir = new int[2];
+
+        if (nearestEnemy == null) {
+            for (int i = 0; i < 15; i ++) {
+                tDir[0] = sDirArr[bDir][me.turn % 3][0];
+                tDir[1] = sDirArr[bDir][me.turn % 3][1];
+
+                if (Math.random() < 0.2) {
+                    tDir[0] *= 2;
+                    tDir[1] *= 2;
+                }
+
+                if (canTraverse(me.x + tDir[0], me.y + tDir[1])) {
+                    log("Its finna be " + tDir[0] + "," + tDir[1]);
+                    return move(tDir[0], tDir[1]);
+                }
+                bDir = (int)(8 * Math.random());
+            }
+        } else {
+            if (nearestDist <= 4) {
+                return attack(nearestEnemy.x - me.x, nearestEnemy.y - me.y);
+            } else {
+                int[] baseDir = {nearestEnemy.x - me.x, nearestEnemy.y - me.y};
+                if(baseDir[0] != 0) baseDir[0] = baseDir[0] / abs(baseDir[0]);
+                if(baseDir[1] != 0) baseDir[1] = baseDir[1] / abs(baseDir[1]);
+
+                int[] goalDir = {baseDir[0], baseDir[1]};
+
+                if (nearestDist > 8) {
+                    if (goalDir[0] + goalDir[1] == 1) {
+                        goalDir[0] *= 3;
+                        goalDir[1] *= 3;
+                    } else {
+                        goalDir[0] *= 2;
+                        goalDir[1] *= 2;
+                    }
+                }
+
+                if (fuel > goalDir[0]*goalDir[0] + goalDir[1]*goalDir[1] && canTraverse(me.x + goalDir[0], me.y + goalDir[1])) {
+                    log("Goal dir looks good, it's " + goalDir[0] + "," + goalDir[1]);
+                    return move(goalDir[0], goalDir[1]);
+                } else if (fuel > baseDir[0]*baseDir[0] + baseDir[1]*baseDir[1] && canTraverse(me.x + baseDir[0], me.y + baseDir[1])) {
+                    log("Fine, base dir, it's " + baseDir[0] + "," + baseDir[1]);
+                    return move(baseDir[0], baseDir[1]);
+                } else {
+
+                    // default movement code; todo: compartmentalize
+                    for (int i = 0; i < 15; i ++) {
+                        tDir[0] = sDirArr[bDir][me.turn % 3][0];
+                        tDir[1] = sDirArr[bDir][me.turn % 3][1];
+
+                        if (Math.random() < 0.2) {
+                            tDir[0] *= 2;
+                            tDir[1] *= 2;
+                        }
+
+                        if (canTraverse(me.x + tDir[0], me.y + tDir[1])) {
+                            return move(tDir[0], tDir[1]);
+                        }
+                        bDir = (int)(8 * Math.random());
+                    }
+
+                }
+            }
+        }
+
+        return null;
     }
 
+    int createdPilgrims;
+
     public Action castleLogic() {
-        return buildUnit(SPECS.CRUSADER, 0, 1);
+        if (createdPilgrims < 2) {
+            if (karbonite >= 10 && fuel >= 50) {
+                int ddir = (int)(4 * Math.random());
+                createdPilgrims += 1; // not reliable
+                return buildUnit(SPECS.PILGRIM, dirs[ddir][0], dirs[ddir][1]);
+            }
+        }
+        else if (karbonite >= 20 && fuel >= 50) {
+            return buildUnit(SPECS.CRUSADER, 0, 1);
+        }
+        return null;
         // return buildUnit(SPECS.CRUSADER,dirs[(int)(mRand % 4)][0],dirs[(int)(mRand % 4)][1]);
     }
 
-    public Action pilgrimLogic() {
+    boolean pilgrimKarb;
 
+    public Action pilgrimLogic() {
+        if (me.turn == 1) { 
+            pilgrimKarb = Math.random() > 0.5;
+        }
+
+        boolean[][] targetMap = pilgrimKarb ? karboniteMap : fuelMap;
+
+
+        if ((me.karbonite > 0 || me.fuel > 0) && getDist(me.x, me.y, mcX, mcY) <= 2) {
+            return give(mcX - me.x, mcY - me.y, me.karbonite, me.fuel); // just give it all
+        }
+
+        if (me.karbonite > 17 || me.fuel > 85) {
+
+            return wiggleMove(mcX, mcY);
+
+        } else {
+
+            int closestX = -1;
+            int closestY = -1;
+            int closestDist = -1;
+
+            for (int y = 0; y < targetMap.length; y++) {
+                for (int x = 0; x < targetMap[y].length; x++) {
+                    if (!targetMap[y][x]) continue;
+                    if (closestDist == -1 || getDist(me.x, me.y, x, y) < closestDist) {
+                        closestX = x;
+                        closestY = y;
+                        closestDist = getDist(me.x, me.y, x, y);
+                    }
+                }
+            }
+
+            if (closestDist == 0) {
+                return mine();
+            } else {
+                return wiggleMove(closestX, closestY);
+            }
+        }
+    }
+
+    public Action wiggleMove(int targetX, int targetY) {
+        int[] goalDir = {targetX - me.x, targetY - me.y};
+        if(goalDir[0] != 0) goalDir[0] /= abs(goalDir[0]);
+        if(goalDir[1] != 0) goalDir[1] /= abs(goalDir[1]); // 'normalizes' to -1 - 1
+
+        if (canTraverse(me.x + goalDir[0], me.y + goalDir[1])) {
+            return move(goalDir[0], goalDir[1]);
+        } else {
+            for (int[] dd : dirs) {
+                if (getDist(0, 0, goalDir[0] + dd[0], goalDir[1] + dd[1]) <= 2) {
+                    if (canTraverse(me.x + goalDir[0] + dd[0], me.y + goalDir[1] + dd[1])) {
+                        return move(goalDir[0] + dd[0], goalDir[1] + dd[1]);
+                    }
+                }
+            }
+        }
         return null;
+    }
+
+    public int abs(int a) {
+        return a < 0 ? -a : a;
+    }
+
+    public int getDist(int x1, int y1, int x2, int y2) {
+        return ((x2-x1)*(x2-x1) + (y2-y1)*(y2-y1));
+    }
+
+    public boolean onMap(int x, int y) {
+        return x >= 0 && y >= 0 && y < map.length && x < map[y].length;
+    }
+
+    public boolean canTraverse(int x, int y) {
+        return onMap(x, y) && map[y][x];
+    }
+
+    // only works for cardinal directions, maps to 0 - 3
+    public int dirToInt(int dx, int dy) {
+        return (dx + 1) + ((dy + 1)/2);
     }
 }
