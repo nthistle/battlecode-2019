@@ -1,11 +1,47 @@
 package bc19;
 
 // import java.util.Random;
+import java.util.*;
+/*
+Standard pair class
+*/
+class Pair {
+    public int first;
+    public int second;
+
+    public Pair(int first, int second) {
+        super();
+        this.first = first;
+        this.second = second;
+    }
+
+    public int hashCode() {
+        int hashFirst = first;
+        int hashSecond = second;
+
+        return (hashFirst + hashSecond) * hashSecond + hashFirst;
+    }
+
+    public boolean equals(Object other) {
+        if (other instanceof Pair) {
+            Pair otherPair = (Pair) other;
+            return (otherPair.first == this.first && otherPair.second == this.second);
+        }
+
+        return false;
+    }
+
+    public String toString()
+    { 
+           return "(" + first + ", " + second + ")"; 
+    }
+}
 
 public class MyRobot extends BCAbstractRobot {
 
     public int mcX = -1; // my castle
     public int mcY = -1;
+    public boolean [][] targetMap; 
 
     public Action turn() {
         if (me.turn == 1) {
@@ -72,7 +108,7 @@ public class MyRobot extends BCAbstractRobot {
                 }
 
                 if (canTraverse(me.x + tDir[0], me.y + tDir[1])) {
-                    log("Its finna be " + tDir[0] + "," + tDir[1]);
+                    //log("Its finna be " + tDir[0] + "," + tDir[1]);
                     return move(tDir[0], tDir[1]);
                 }
                 bDir = (int)(8 * Math.random());
@@ -98,10 +134,10 @@ public class MyRobot extends BCAbstractRobot {
                 }
 
                 if (fuel > goalDir[0]*goalDir[0] + goalDir[1]*goalDir[1] && canTraverse(me.x + goalDir[0], me.y + goalDir[1])) {
-                    log("Goal dir looks good, it's " + goalDir[0] + "," + goalDir[1]);
+                    //log("Goal dir looks good, it's " + goalDir[0] + "," + goalDir[1]);
                     return move(goalDir[0], goalDir[1]);
                 } else if (fuel > baseDir[0]*baseDir[0] + baseDir[1]*baseDir[1] && canTraverse(me.x + baseDir[0], me.y + baseDir[1])) {
-                    log("Fine, base dir, it's " + baseDir[0] + "," + baseDir[1]);
+                    //log("Fine, base dir, it's " + baseDir[0] + "," + baseDir[1]);
                     return move(baseDir[0], baseDir[1]);
                 } else {
 
@@ -133,13 +169,20 @@ public class MyRobot extends BCAbstractRobot {
     public Action castleLogic() {
         if (createdPilgrims < 2) {
             if (karbonite >= 10 && fuel >= 50) {
-                int ddir = (int)(4 * Math.random());
-                createdPilgrims += 1; // not reliable
-                return buildUnit(SPECS.PILGRIM, dirs[ddir][0], dirs[ddir][1]);
+                for (int i=0; i<4; i++){
+                    if (canTraverse(me.x + dirs[i][0], me.y + dirs[i][1])){
+                        createdPilgrims += 1; 
+                        return buildUnit(SPECS.PILGRIM, dirs[i][0], dirs[i][1]);
+                    }
+                }
             }
         }
         else if (karbonite >= 20 && fuel >= 50) {
-            return buildUnit(SPECS.CRUSADER, 0, 1);
+            for (int i=0; i<4; i++){
+                if (canTraverse(me.x + dirs[i][0], me.y + dirs[i][1])){
+                    return buildUnit(SPECS.CRUSADER, dirs[i][0], dirs[i][1]);
+                }
+            }
         }
         return null;
         // return buildUnit(SPECS.CRUSADER,dirs[(int)(mRand % 4)][0],dirs[(int)(mRand % 4)][1]);
@@ -147,12 +190,48 @@ public class MyRobot extends BCAbstractRobot {
 
     boolean pilgrimKarb;
 
-    public Action pilgrimLogic() {
+    public List <Pair> bfs_map (boolean [][] grid, int row, int col){
+
+        Queue qu = new LinkedList();
+        Queue paths = new LinkedList(); 
+
+        HashMap <Pair, Boolean> vis = new HashMap <> (); 
+
+        qu.add(new Pair(row, col));
+        
+        List<Pair> cur_path = new ArrayList<> (); 
+        cur_path.add (new Pair(row, col)); 
+        paths.add(cur_path); 
+
+        while (qu.size() > 0){
+            Pair cur = (Pair) qu.poll();
+            List <Pair> path = (List<Pair>) paths.poll(); 
+
+            if (vis.get(cur) == true) continue; 
+            vis.put(cur, true); 
+
+            if (grid[cur.first][cur.second]) return path; 
+
+            for (int i=0; i<dirs.length; i++){
+                if (canTraverse(cur.second + dirs[i][1], cur.first + dirs[i][0])){
+                    Pair new_loc = new Pair (cur.first + dirs[i][0], cur.second + dirs[i][1]); 
+                    List <Pair> new_path = new ArrayList <> (path); 
+                    new_path.add (new_loc);
+
+                    qu.add(new_loc);
+                    paths.add(new_path); 
+                }
+            }
+
+        }
+        return null;  
+    }
+    public Action pilgrimLogic() {        
         if (me.turn == 1) { 
             pilgrimKarb = Math.random() > 0.5;
         }
-
-        boolean[][] targetMap = pilgrimKarb ? karboniteMap : fuelMap;
+        if (targetMap == null)
+            targetMap = pilgrimKarb ? karboniteMap : fuelMap;
 
 
         if ((me.karbonite > 0 || me.fuel > 0) && getDist(me.x, me.y, mcX, mcY) <= 2) {
@@ -160,11 +239,10 @@ public class MyRobot extends BCAbstractRobot {
         }
 
         if (me.karbonite > 17 || me.fuel > 85) {
-
             return wiggleMove(mcX, mcY);
 
         } else {
-
+            /*
             int closestX = -1;
             int closestY = -1;
             int closestDist = -1;
@@ -184,6 +262,25 @@ public class MyRobot extends BCAbstractRobot {
                 return mine();
             } else {
                 return wiggleMove(closestX, closestY);
+            }
+            */
+            List<Pair> path = bfs_map (targetMap, me.y, me.x); 
+            if (path == null){
+                // pilgrim is useless
+                log ("I am a useless idiot"); 
+                return null; 
+            }
+            if (path.size() == 0){
+                // shouldn't be possible
+                return null; 
+            }
+            else if (path.size() == 1){
+                // on a target
+                return mine(); 
+            }
+            else{
+                Pair next = (Pair) path.get (1); 
+                return move (next.second - me.x, next.first - me.y);
             }
         }
     }
@@ -220,7 +317,7 @@ public class MyRobot extends BCAbstractRobot {
     }
 
     public boolean canTraverse(int x, int y) {
-        return onMap(x, y) && map[y][x];
+        return onMap(x, y) && map[y][x] && getVisibleRobotMap()[y][x] <= 0;
     }
 
     // only works for cardinal directions, maps to 0 - 3
