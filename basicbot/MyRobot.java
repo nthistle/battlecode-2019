@@ -292,9 +292,18 @@ public class MyRobot extends BCAbstractRobot {
     }
 
     public Action pilgrimLogic() {
-        if (me.turn == 1) {
+        if (me.turn == 1) { 
             pilgrimKarb = Math.random() > 0.5;
+            if (this.getVisibleRobots().length == 3){
+                targetMap = karboniteMap; 
+            }
+            else if (this.getVisibleRobots().length == 2){
+                targetMap = fuelMap; 
+            }
+            else
+                targetMap = pilgrimKarb ? karboniteMap : fuelMap;
         }
+
         if (targetMap == null)
             targetMap = pilgrimKarb ? karboniteMap : fuelMap;
 
