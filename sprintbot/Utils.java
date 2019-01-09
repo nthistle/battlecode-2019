@@ -37,19 +37,31 @@ public class Utils
     }
 
     public static int getDistance(Coordinate c1, Coordinate c2) {
-        return (c2.x-c1.x)*(c2.x-c1.x) + (c2.y-c1.y)*(c2.y-c1.y);
+        return getDistance(c1.x, c1.y, c2.x, c2.y);
     }
 
     public static boolean isInRange(boolean[][] terrain, int x, int y) {
         return x >= 0 && y >= 0 && y < terrain.length && x < terrain[y].length;
     }
 
+    public static boolean isInRange(boolean[][] terrain, Coordinate c) {
+        return isInRange(terrain, c.x, c.y);
+    }
+
     public static boolean isPassable(boolean[][] terrain, int x, int y) {
         return terrain[y][x];
     }
 
+    public static boolean isPassable(boolean[][] terrain, Coordinate c) {
+        return isPassable(terrain, c.x, c.y);
+    }
+
     public static boolean isOccupied(int[][] robotMap, int x, int y) {
-        return robotMap[y][x] <= 0; // doesn't work for squares out of vision range
+        return robotMap[y][x] > 0; // doesn't work for squares out of vision range
+    }
+
+    public static boolean isOccupied(int[][] robotMap, Coordinate c) {
+        return isOccupied(robotMap, c.x, c.y);
     }
 }
 
