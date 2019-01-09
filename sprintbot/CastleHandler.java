@@ -6,18 +6,27 @@ public class CastleHandler extends RobotHandler
         super(robot);
     }
 
-    int crusadersBuilt;
+    int builtPilgrims = 0;
 
     public void setup() {
-        robot.log("Castle setup called!");
-        crusadersBuilt = 0; // not necessary, used as an example
     }
 
     public Action turn() {
-        robot.log("Castle turn called!");
-        if (crusadersBuilt == 0) {
-            return robot.buildUnit(robot.SPECS.CRUSADER, 0, 1);
+        if (builtPilgrims < 2) {
+            if (robot.karbonite >= 10 && robot.fuel >= 50) {
+                return buildRandom(robot.SPECS.PILGRIM);
+            }
+        } else {
+            return buildRandom(robot.SPECS.CRUSADER);
         }
-        return null;
+    }
+
+    public Action buildRandom(int unitType) {
+        Coordinate myLoc = Coordinate.fromRobot(robot.me);
+        // for (int i = 0; i < 50; i++) {
+            Direction buildDir = Utils.getRandom8Direction();
+            return robot.buildUnit(unitType, buildDir.dx, buildDir.dy);
+        // }
+        // return null;
     }
 }

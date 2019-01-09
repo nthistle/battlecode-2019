@@ -11,6 +11,8 @@ public class MyRobot extends BCAbstractRobot {
                 this.myHandler = new CastleHandler(this);
             } else if (me.unit == SPECS.CRUSADER) {
                 this.myHandler = new CrusaderHandler(this);
+            } else if (me.unit == SPECS.PILGRIM) {
+                this.myHandler = new PilgrimHandler(this);
             }
 
             // Calls handler setup method
