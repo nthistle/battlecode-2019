@@ -63,9 +63,8 @@ public class MyRobot extends BCAbstractRobot {
     public int mcX = -1; // my castle
     public int mcY = -1;
     public boolean [][] targetMap;
+
     public Action turn() {
-        if (getHorizontalSymmetry()) log ("Horizontal"); 
-        if (getVerticalSymmetry()) log ("Vertical");
         if (me.turn == 1) {
 
             // initialization stuff
@@ -99,6 +98,31 @@ public class MyRobot extends BCAbstractRobot {
                                 {{0,-1},{0,-1},{1,0}}, {{0,-1},{0,-1},{-1,0}}};
 
 
+    /*
+        Symmetry methods
+    */
+    public boolean checkVerticalSymmetry (boolean [][] x){
+        for (int i=0; i<x.length; i++){
+            for (int j=0; j<x[i].length; j++){
+                if (x[i][j] != x[i][x[i].length - 1 - j]) return false; 
+            }
+        }
+        return true; 
+    }
+    public boolean checkHorizontalSymmetry (boolean [][] x){
+        for (int i=0; i<x.length; i++){
+            for (int j=0; j<x[i].length; j++){
+                if (x[x.length - 1 - i][j] != x[i][j]) return false; 
+            }
+        }
+        return true; 
+    }
+    public boolean getVerticalSymmetry (){
+        return checkVerticalSymmetry(map) && checkVerticalSymmetry(karboniteMap) && checkVerticalSymmetry(fuelMap); 
+    }
+    public boolean getHorizontalSymmetry () {
+        return checkHorizontalSymmetry(map) && checkHorizontalSymmetry(karboniteMap) && checkHorizontalSymmetry(fuelMap); 
+    }
 
     public Action crusaderLogic() {
         if (me.turn == 1) {
@@ -186,28 +210,6 @@ public class MyRobot extends BCAbstractRobot {
         return null;
     }
 
-    public boolean checkVerticalSymmetry (boolean [][] x){
-        for (int i=0; i<x.length; i++){
-            for (int j=0; j<x[i].length; j++){
-                if (x[i][j] != x[i][x[i].length - 1 - j]) return false; 
-            }
-        }
-        return true; 
-    }
-    public boolean checkHorizontalSymmetry (boolean [][] x){
-        for (int i=0; i<x.length; i++){
-            for (int j=0; j<x[i].length; j++){
-                if (x[x.length - 1 - i][j] != x[i][j]) return false; 
-            }
-        }
-        return true; 
-    }
-    public boolean getVerticalSymmetry (){
-        return checkVerticalSymmetry(map) && checkVerticalSymmetry(karboniteMap) && checkVerticalSymmetry(fuelMap); 
-    }
-    public boolean getHorizontalSymmetry () {
-        return checkHorizontalSymmetry(map) && checkHorizontalSymmetry(karboniteMap) && checkHorizontalSymmetry(fuelMap); 
-    }
     int createdPilgrims;
 
     public Action castleLogic() {
@@ -231,7 +233,7 @@ public class MyRobot extends BCAbstractRobot {
         return null;
         // return buildUnit(SPECS.CRUSADER,dirs[(int)(mRand % 4)][0],dirs[(int)(mRand % 4)][1]);
     }
-    
+
     boolean pilgrimKarb;
 
     public List <Pair> bfs_map (boolean [][] grid, int row, int col){
