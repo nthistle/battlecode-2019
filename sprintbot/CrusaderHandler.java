@@ -12,6 +12,8 @@ public class CrusaderHandler extends RobotHandler
 
 	public Action turn() {
 		robot.log("Crusader turn called!");
-		return null;
+
+		Direction d = Utils.getRandomDirection();
+		return robot.move(d.dx, d.dy);
 	}
 }
