@@ -43,7 +43,7 @@ Try to use this instead of Pair because it expresses intent more clearly
 class Coordinate
 {
 	int y, x;
-	public Coordnate(int y, int x)
+	public Coordinate(int y, int x)
 	{
 		this.y = y;
 		this.x = x;
@@ -254,16 +254,16 @@ public class MyRobot extends BCAbstractRobot {
 	Guaranteed to reach the goal in the minimum number of turns if everything stays still, but not necessarily using the minimum amount of fuel
 	Returns null if no path is found
 	Behavior is undefined if you are already on a goal tile
+	the argument TRAVEL_RADIUS is the movement speed of the unit
 	*/
-    Coordinate bfs_map_better (boolean [][] grid, int y, int x)
+    Coordinate bfs_map_better (boolean [][] grid, int y, int x, int TRAVEL_RADIUS)
     {
-        Queue q = new LinkedList();
+        Queue<Coordinate> q = new LinkedList<>();
         boolean vis[][] = new boolean[map.length][map.length];
         Coordinate prev[][] = new Coordinate[map.length][map.length];
         q.add(new Coordinate(y, x));
         vis[y][x] = true;
-        const int TRAVEL_RADIUS = 9;
-        const int MAXD = (int)Math.sqrt(TRAVEL_RADIUS);
+        int MAXD = (int)Math.sqrt(TRAVEL_RADIUS);
         while(!q.isEmpty())
         {
 			Coordinate cur = q.poll();
@@ -273,17 +273,17 @@ public class MyRobot extends BCAbstractRobot {
 				{
 					if(canTraverse(cur.y + a, cur.x + b) && !vis[cur.y + a][cur.x + b])
 					{
-						if(goal[cur.y + a][cur.x + b])
+						if(grid[cur.y + a][cur.x + b])
 						{
-							while(!prev[cur.y][cur.x].equals(new Coord(y, x))) //backtrack
+							while(!prev[cur.y][cur.x].equals(new Coordinate(y, x))) //backtrack
 							{
 								cur = prev[cur.y][cur.x];
 							}
 							return cur;
 						}
 						vis[cur.y + a][cur.x + b] = true;
-						q.push(new Coordinate(cur.y + a, cur.x + b));
-						prev[cur.y + a][cur.x + b] = new Coord(cur.y, cur.x);
+						q.add(new Coordinate(cur.y + a, cur.x + b));
+						prev[cur.y + a][cur.x + b] = new Coordinate(cur.y, cur.x);
 					}
 				}
 			}
