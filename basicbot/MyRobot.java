@@ -32,16 +32,37 @@ class Pair {
     }
 
     public String toString()
-    { 
-           return "(" + first + ", " + second + ")"; 
+    {
+           return "(" + first + ", " + second + ")";
     }
+}
+
+/*
+Try to use this instead of Pair because it expresses intent more clearly
+*/
+class Coordinate
+{
+	int y, x;
+	public Coordnate(int y, int x)
+	{
+		this.y = y;
+		this.x = x;
+	}
+	public boolean equals(Coordinate other)
+	{
+		return x==other.x && y==other.y;
+	}
+	public String toString()
+	{
+		return "(" + y + "," + x + ")";
+	}
 }
 
 public class MyRobot extends BCAbstractRobot {
 
     public int mcX = -1; // my castle
     public int mcY = -1;
-    public boolean [][] targetMap; 
+    public boolean [][] targetMap;
 
     public Action turn() {
         if (me.turn == 1) {
@@ -82,6 +103,7 @@ public class MyRobot extends BCAbstractRobot {
         if (me.turn == 1) {
             bDir = (int)(8 * Math.random());
         }
+
         Robot[] nearby = getVisibleRobots();
         Robot nearestEnemy = null;
         int nearestDist = -1;
@@ -170,7 +192,7 @@ public class MyRobot extends BCAbstractRobot {
             if (karbonite >= 10 && fuel >= 50) {
                 for (int i=0; i<4; i++){
                     if (canTraverse(me.x + dirs[i][0], me.y + dirs[i][1])){
-                        createdPilgrims += 1; 
+                        createdPilgrims += 1;
                         return buildUnit(SPECS.PILGRIM, dirs[i][0], dirs[i][1]);
                     }
                 }
@@ -190,57 +212,91 @@ public class MyRobot extends BCAbstractRobot {
     boolean pilgrimKarb;
 
     public List <Pair> bfs_map (boolean [][] grid, int row, int col){
-        /*
-            Returns a path from the bfs
 
-            bfs from (row, col) to the first square that is marked as true in grid
-        */
         Queue qu = new LinkedList();
-        Queue paths = new LinkedList(); 
+        Queue paths = new LinkedList();
 
-        HashMap <Pair, Boolean> vis = new HashMap <> (); 
+        HashMap <Pair, Boolean> vis = new HashMap <> ();
 
         qu.add(new Pair(row, col));
-        
-        List<Pair> cur_path = new ArrayList<> (); 
-        cur_path.add (new Pair(row, col)); 
-        paths.add(cur_path); 
+
+        List<Pair> cur_path = new ArrayList<> ();
+        cur_path.add (new Pair(row, col));
+        paths.add(cur_path);
 
         while (qu.size() > 0){
             Pair cur = (Pair) qu.poll();
-            List <Pair> path = (List<Pair>) paths.poll(); 
+            List <Pair> path = (List<Pair>) paths.poll();
 
-            if (vis.get(cur) == true) continue; 
-            vis.put(cur, true); 
+            if (vis.get(cur) == true) continue;
+            vis.put(cur, true);
 
-            if (grid[cur.first][cur.second]) return path; 
+            if (grid[cur.first][cur.second]) return path;
 
             for (int i=0; i<dirs.length; i++){
                 if (canTraverse(cur.second + dirs[i][1], cur.first + dirs[i][0])){
-                    Pair new_loc = new Pair (cur.first + dirs[i][0], cur.second + dirs[i][1]); 
-                    List <Pair> new_path = new ArrayList <> (path); 
+                    Pair new_loc = new Pair (cur.first + dirs[i][0], cur.second + dirs[i][1]);
+                    List <Pair> new_path = new ArrayList <> (path);
                     new_path.add (new_loc);
 
                     qu.add(new_loc);
-                    paths.add(new_path); 
+                    paths.add(new_path);
                 }
             }
 
         }
-        return null;  
+        return null;
     }
-    public Action pilgrimLogic() {        
-        if (me.turn == 1) { 
+	/*
+	Kevin Liu, 1/8/19
+	Revised version of bfs for pilgrim
+	Returns the coordinate you should move to this turn in order to reach a goal in the minimum number of turns
+	Guaranteed to reach the goal in the minimum number of turns if everything stays still, but not necessarily using the minimum amount of fuel
+	Returns null if no path is found
+	Behavior is undefined if you are already on a goal tile
+	*/
+    Coordinate bfs_map_better (boolean [][] grid, int y, int x)
+    {
+        Queue q = new LinkedList();
+        boolean vis[][] = new boolean[map.length][map.length];
+        Coordinate prev[][] = new Coordinate[map.length][map.length];
+        q.add(new Coordinate(y, x));
+        vis[y][x] = true;
+        const int TRAVEL_RADIUS = 9;
+        const int MAXD = (int)Math.sqrt(TRAVEL_RADIUS);
+        while(!q.isEmpty())
+        {
+			Coordinate cur = q.poll();
+			for(int a=-MAXD; a<=MAXD; a++)
+			{
+				for(int b=-MAXD; b<=MAXD; b++)
+				{
+					if(canTraverse(cur.y + a, cur.x + b) && !vis[cur.y + a][cur.x + b])
+					{
+						if(goal[cur.y + a][cur.x + b])
+						{
+							while(!prev[cur.y][cur.x].equals(new Coord(y, x))) //backtrack
+							{
+								cur = prev[cur.y][cur.x];
+							}
+							return cur;
+						}
+						vis[cur.y + a][cur.x + b] = true;
+						q.push(new Coordinate(cur.y + a, cur.x + b));
+						prev[cur.y + a][cur.x + b] = new Coord(cur.y, cur.x);
+					}
+				}
+			}
+		}
+        return null;
+    }
+
+    public Action pilgrimLogic() {
+        if (me.turn == 1) {
             pilgrimKarb = Math.random() > 0.5;
-            if (this.getVisibleRobots().length == 3){
-                targetMap = karboniteMap; 
-            }
-            else if (this.getVisibleRobots().length == 2){
-                targetMap = fuelMap; 
-            }
-            else
-                targetMap = pilgrimKarb ? karboniteMap : fuelMap;
         }
+        if (targetMap == null)
+            targetMap = pilgrimKarb ? karboniteMap : fuelMap;
 
 
         if ((me.karbonite > 0 || me.fuel > 0) && getDist(me.x, me.y, mcX, mcY) <= 2) {
@@ -255,7 +311,6 @@ public class MyRobot extends BCAbstractRobot {
             int closestX = -1;
             int closestY = -1;
             int closestDist = -1;
-
             for (int y = 0; y < targetMap.length; y++) {
                 for (int x = 0; x < targetMap[y].length; x++) {
                     if (!targetMap[y][x]) continue;
@@ -266,33 +321,28 @@ public class MyRobot extends BCAbstractRobot {
                     }
                 }
             }
-
             if (closestDist == 0) {
                 return mine();
             } else {
                 return wiggleMove(closestX, closestY);
             }
             */
-            List<Pair> path = bfs_map (targetMap, me.y, me.x); 
+            List<Pair> path = bfs_map (targetMap, me.y, me.x);
             if (path == null){
                 // pilgrim is useless
-                log ("I am a useless idiot"); 
-                return null; 
+                log ("I am a useless idiot");
+                return null;
             }
             if (path.size() == 0){
                 // shouldn't be possible
-                return null; 
+                return null;
             }
             else if (path.size() == 1){
                 // on a target
-                return mine(); 
-            }
-            else if (path.size() == 2) {
-                Pair next = (Pair) path.get (1); 
-                return move (next.second - me.x, next.first - me.y);
+                return mine();
             }
             else{
-                Pair next = (Pair) path.get (2); 
+                Pair next = (Pair) path.get (1);
                 return move (next.second - me.x, next.first - me.y);
             }
         }
