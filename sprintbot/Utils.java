@@ -17,6 +17,56 @@ public class Utils
 
     // Utils methods
 
+    // This direction map is indexed with [y][x], just like terrain
+    public static Direction[][] getDirectionMap(boolean[][] terrain, int x, int y) {
+        Direction[][] dirMap = new Direction[terrain.length][terrain[0].length];
+
+        LinkedList<Coordinate> queue = new LinkedList<Coordinate>();
+        queue.add(new Coordinate(x, y));
+        dirMap[y][x] = new Direction(0, 0);
+
+        while(queue.size() > 0) {
+             Coordinate c = queue.poll();
+
+            for(Direction dir : directions) {
+                Coordinate n = c.add(dir);
+                if (isInRange(terrain, n) && isPassable(terrain, n) && dirMap[n.y][n.x] == null) {
+                    dirMap[n.y][n.x] = dir.reverse();
+                    queue.add(n);
+                }
+            }
+        }
+
+        return dirMap;
+    }
+
+    // Tries to follow dirMap as far as possible, given distanceAllowed and robotMap
+    // Note that this doesn't converge to optimal pathing behavior, but works well enough.
+    public static Direction followDirectionMap(Direction[][] dirMap, int[][] robotMap, 
+            int distanceAllowed, int x, int y) {
+
+        if (dirMap[y][x] == null) return null;
+
+        ArrayList<Direction> cumulativeDirs = new ArrayList<Direction>();
+        Coordinate originalLoc = new Coordinate(x, y);
+        Coordinate cumulativeLoc = originalLoc;
+
+        while (getDistance(originalLoc, cumulativeLoc) <= distanceAllowed) {
+            Direction nextDir = dirMap[cumulativeLoc.y][cumulativeLoc.x];
+            if (nextDir.dx == 0 && nextDir.dy == 0) break;
+            cumulativeDirs.add(nextDir);
+            cumulativeLoc = cumulativeLoc.add(nextDir);
+        }
+
+        // go backwards until we hit unoccupied
+        int lastIdx = cumulativeDirs.size();
+        while (isOccupied(robotMap, cumulativeLoc) && lastIdx > 0) {
+            cumulativeLoc = cumulativeLoc.subtract(cumulativeDirs.get(--lastIdx));
+        }
+
+        return originalLoc.dirTo(cumulativeLoc);
+    }
+
     // Random from 4-directions (r2 distance 1)
     public static Direction getRandomDirection() {
         return directions[(int)(Math.random() * directions.length)];
@@ -24,29 +74,6 @@ public class Utils
 
     public static Direction getRandom8Direction() {
         return dir8[(int)(Math.random() * dir8.length)];
-    }
-
-    // This direction map is indexed with [y][x], just like terrain
-    public static Direction[][] getDirectionMap(boolean[][] terrain, int x, int y) {
-        Direction[][] dirMap = new Direction[terrain.length][terrain[0].length];
-
-        LinkedList<Coordinate> queue = new LinkedList<Coordinate>();
-        queue.offer(new Coordinate(x, y));
-        dirMap[y][x] = new Direction(0, 0);
-
-        while(queue.size() > 0) {
-            Coordinate c = queue.poll();
-
-            for(Direction dir : directions) {
-                Coordinate n = c.add(dir);
-                if (isInRange(terrain, n) && isPassable(terrain, n) && dirMap[n.y][n.x] == null) {
-                    dirMap[n.y][n.x] = dir.reverse();
-                    queue.offer(n);
-                }
-            }
-        }
-
-        return dirMap;
     }
 
     public static int getDistance(int x1, int y1, int x2, int y2) {
@@ -123,6 +150,14 @@ class Coordinate
 
     public Coordinate add(Direction d) {
         return new Coordinate(this.x + d.dx, this.y + d.dy);
+    }
+
+    public Coordinate subtract(Direction d) {
+        return new Coordinate(this.x - d.dx, this.y - d.dy);
+    }
+
+    public Direction dirTo(Coordinate c) {
+        return new Direction(c.x - this.x, c.y - this.y);
     }
 
     public boolean equals(Object other) {
