@@ -1,6 +1,7 @@
 package bc19;
 
 import java.util.LinkedList;
+import java.util.ArrayList;
 
 public class Utils
 {
@@ -28,6 +29,22 @@ public class Utils
     // This direction map is indexed with [y][x], just like terrain
     public static Direction[][] getDirectionMap(boolean[][] terrain, int x, int y) {
         Direction[][] dirMap = new Direction[terrain.length][terrain[0].length];
+
+        LinkedList<Coordinate> queue = new LinkedList<Coordinate>();
+        queue.offer(new Coordinate(x, y));
+        dirMap[y][x] = new Direction(0, 0);
+
+        while(queue.size() > 0) {
+            Coordinate c = queue.poll();
+
+            for(Direction dir : directions) {
+                Coordinate n = c.add(dir);
+                if (isInRange(terrain, n) && isPassable(terrain, n) && dirMap[n.y][n.x] == null) {
+                    dirMap[n.y][n.x] = dir.reverse();
+                    queue.offer(n);
+                }
+            }
+        }
 
         return dirMap;
     }
@@ -73,6 +90,20 @@ class Direction
     public Direction(int dx, int dy) {
         this.dx = dx;
         this.dy = dy;
+    }
+
+    public Direction reverse() {
+        return new Direction(-this.dx, -this.dy);
+    }
+
+    public boolean equals(Object other) {
+        if (!(other instanceof Direction)) return false;
+        Direction d = (Direction)other;
+        return d.dx == dx && d.dy == dy;
+    }
+
+    public String toString() {
+        return "<" + dx + "," + dy + ">";
     }
 }
 
