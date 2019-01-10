@@ -40,6 +40,10 @@ public class Utils
         return dirMap;
     }
 
+    public static Direction[][] getDirectionMap(boolean[][] terrain, Coordinate c) {
+        return getDirectionMap(terrain, c.x, c.y);
+    }
+
     // Tries to follow dirMap as far as possible, given distanceAllowed and robotMap
     // Note that this doesn't converge to optimal pathing behavior, but works well enough.
     public static Direction followDirectionMap(Direction[][] dirMap, int[][] robotMap, 
@@ -65,6 +69,11 @@ public class Utils
         }
 
         return originalLoc.dirTo(cumulativeLoc);
+    }
+
+    public static Direction followDirectionMap(Direction[][] dirMap, int[][] robotMap,
+        int distanceAllowed, Coordinate c) {
+        return followDirectionMap(dirMap, robotMap, distanceAllowed, c.x, c.y);
     }
 
     // Random from 4-directions (r2 distance 1)
