@@ -10,7 +10,9 @@ public class CrusaderHandler extends RobotHandler
     Direction[][] presumedMap;
 
     public void setup() {
-        robot.log("Crusader setup called!");
+        mapSymmetry = Utils.getSymmetry(robot.map, robot.karboniteMap, robot.fuelMap);
+        // TODO: for now we just target our reflected spawn loc, in future actually use presumed enemy castle loc
+        presumedMap = Utils.getDirectionMap(robot.map, Utils.getReflected(robot.map, Coordinate.fromRobot(robot.me), mapSymmetry));
     }
 
     public Action turn() {
@@ -43,8 +45,8 @@ public class CrusaderHandler extends RobotHandler
             return robot.move(netDir.dx, netDir.dy);
         }
 
-
-        Direction d = Utils.getRandomDirection();
+        Direction d = Utils.followDirectionMap(presumedMap, robot.getVisibleRobotMap(), 9, robot.me.x, robot.me.y);
+        // Direction d = Utils.getRandomDirection();
         return robot.move(d.dx, d.dy);
     }
 }
