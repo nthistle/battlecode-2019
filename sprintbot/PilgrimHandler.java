@@ -6,6 +6,8 @@ public class PilgrimHandler extends RobotHandler
         super(robot);
     }
 
+    boolean isKarbonitePilgrim; // TODO
+
     Direction[][] targetMap;
     Direction[][] castleMap;
 
@@ -72,7 +74,10 @@ public class PilgrimHandler extends RobotHandler
             }
 
             // just walk towards base
-            return robot.move(castleMap[robot.me.y][robot.me.x].dx, castleMap[robot.me.y][robot.me.x].dy);
+            Direction d = Utils.followDirectionMap(castleMap, robot.getVisibleRobotMap(), 4, robot.me.x, robot.me.y);
+            robot.log("Trying to move " + d);
+            return robot.move(d.dx, d.dy);
+            // return robot.move(castleMap[robot.me.y][robot.me.x].dx, castleMap[robot.me.y][robot.me.x].dy);
         } else {
             // navigate towards karb/fuel and mine if applicable
 
@@ -80,7 +85,10 @@ public class PilgrimHandler extends RobotHandler
                 return robot.mine();
             } 
 
-            return robot.move(targetMap[robot.me.y][robot.me.x].dx, targetMap[robot.me.y][robot.me.x].dy);
+            Direction d = Utils.followDirectionMap(targetMap, robot.getVisibleRobotMap(), 4, robot.me.x, robot.me.y);
+            robot.log("Trying to move " + d);
+            return robot.move(d.dx, d.dy);
+            // return robot.move(targetMap[robot.me.y][robot.me.x].dx, targetMap[robot.me.y][robot.me.x].dy);
         }
     }
 }
