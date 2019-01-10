@@ -14,6 +14,7 @@ public class CastleHandler extends RobotHandler
     public Action turn() {
         if (builtPilgrims < 2) {
             if (robot.karbonite >= 10 && robot.fuel >= 50) {
+                builtPilgrims += 1;
                 return buildRandom(robot.SPECS.PILGRIM);
             }
         } else {
