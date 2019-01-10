@@ -51,7 +51,7 @@ public class Utils
         Coordinate originalLoc = new Coordinate(x, y);
         Coordinate cumulativeLoc = originalLoc;
 
-        while (getDistance(originalLoc, cumulativeLoc) <= distanceAllowed) {
+        while (getDistance(originalLoc, cumulativeLoc) < distanceAllowed) {
             Direction nextDir = dirMap[cumulativeLoc.y][cumulativeLoc.x];
             if (nextDir.dx == 0 && nextDir.dy == 0) break;
             cumulativeDirs.add(nextDir);
@@ -60,7 +60,7 @@ public class Utils
 
         // go backwards until we hit unoccupied
         int lastIdx = cumulativeDirs.size();
-        while (isOccupied(robotMap, cumulativeLoc) && lastIdx > 0) {
+        while ((getDistance(originalLoc, cumulativeLoc) > distanceAllowed || isOccupied(robotMap, cumulativeLoc)) && lastIdx > 0) {
             cumulativeLoc = cumulativeLoc.subtract(cumulativeDirs.get(--lastIdx));
         }
 
@@ -107,6 +107,36 @@ public class Utils
     public static boolean isOccupied(int[][] robotMap, Coordinate c) {
         return isOccupied(robotMap, c.x, c.y);
     }
+
+    public static int max(int a, int b) {
+        return a > b ? a : b;
+    }
+
+    public static int min(int a, int b) {
+        return a < b ? a : b;
+    }
+
+    // TODO: add explicit horizontal symmetry and specific case logic
+    // for both horizontal and vertical symmetry (low priority)
+    public static boolean checkVerticalSymmetry(boolean[][] m) {
+        for (int y = 0; y < m.length; y++) {
+            for (int x = 0; x < m[y].length; x++) {
+                if (m[y][x] != m[y][m[y].length - 1 - x]) return false;
+            }
+        }
+        return true;
+    }
+
+    // true means vertical symmetry
+    public static boolean getSymmetry(boolean[][] map, boolean[][] karboniteMap, boolean[][] fuelMap) {
+        return checkVerticalSymmetry(map) && checkVerticalSymmetry(karboniteMap) && checkVerticalSymmetry(fuelMap);
+    }
+
+    // true means vertical symmetry
+    public static Coordinate getReflected(boolean[][] map, Coordinate c, boolean symmetry) {
+        return symmetry ? new Coordinate(map[c.y].length - 1 - c.x, c.y) : new Coordinate(c.x, map.length - 1 - c.y);
+    }
+
 }
 
 class Direction
