@@ -25,10 +25,16 @@ public class Utils
         queue.add(new Coordinate(x, y));
         dirMap[y][x] = new Direction(0, 0);
 
-        while(queue.size() > 0) {
-             Coordinate c = queue.poll();
+        Direction[] myDirections = new Direction[directions.length];
+        for (int i = 0; i < directions.length; i++) myDirections[i] = directions[i];
+        // we create a copy of directions so we can randomly shuffle it to give
+        // variance to the paths
 
-            for(Direction dir : directions) {
+        while(queue.size() > 0) {
+            Coordinate c = queue.poll();
+
+            shuffleArray(myDirections);
+            for(Direction dir : myDirections) {
                 Coordinate n = c.add(dir);
                 if (isInRange(terrain, n) && isPassable(terrain, n) && dirMap[n.y][n.x] == null) {
                     dirMap[n.y][n.x] = dir.reverse();
@@ -74,6 +80,18 @@ public class Utils
     public static Direction followDirectionMap(Direction[][] dirMap, int[][] robotMap,
         int distanceAllowed, Coordinate c) {
         return followDirectionMap(dirMap, robotMap, distanceAllowed, c.x, c.y);
+    }
+
+    // shuffles array in place
+    public static <E> void shuffleArray(E[] array) {
+        E tmp;
+        int swapIndex;
+        for (int i = 0; i < array.length - 1; i ++) {
+            swapIndex = i + (int)(Math.random() * (array.length - i));
+            tmp = array[i];
+            array[i] = array[swapIndex];
+            array[swapIndex] = tmp;
+        }
     }
 
     // Random from 4-directions (r2 distance 1)
