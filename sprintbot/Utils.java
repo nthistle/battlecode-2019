@@ -30,11 +30,11 @@ public class Utils
         // we create a copy of directions so we can randomly shuffle it to give
         // variance to the paths
 
-        while(queue.size() > 0) {
+        while (queue.size() > 0) {
             Coordinate c = queue.poll();
 
             shuffleArray(myDirections);
-            for(Direction dir : myDirections) {
+            for (Direction dir : myDirections) {
                 Coordinate n = c.add(dir);
                 if (isInRange(terrain, n) && isPassable(terrain, n) && dirMap[n.y][n.x] == null) {
                     dirMap[n.y][n.x] = dir.reverse();
@@ -48,6 +48,35 @@ public class Utils
 
     public static Direction[][] getDirectionMap(boolean[][] terrain, Coordinate c) {
         return getDirectionMap(terrain, c.x, c.y);
+    }
+
+    public static int[][] getDistanceMap(boolean[][] terrain, int x, int y) {
+        int[][] distMap = new int[terrain.length][terrain[0].length];
+
+        for (int i = 0; i < distMap.length; i++) {
+            for (int j = 0; j < distMap[i].length; j++) {
+                distMap[i][j] = 5000;
+            }
+        }
+
+        LinkedList<Coordinate> queue = new LinkedList<Coordinate>();
+        queue.add(new Coordinate(x, y));
+
+        distMap[y][x] = 0;
+
+        while (queue.size() > 0) [
+            Coordinate c = queue.poll();
+
+            for (Direction dir : direction) {
+                Coordinate n = c.add(dir);
+                if (isInRange(terrain, n) && isPassable(terrain, n) && distMap[n.y][n.x] == 5000) {
+                    distMap[n.y][n.x] = distMap[c.y][c.x] + 1;
+                    queue.add(n);
+                }
+            }
+        }
+
+        return distMap;
     }
 
     // Tries to follow dirMap as far as possible, given distanceAllowed and robotMap
