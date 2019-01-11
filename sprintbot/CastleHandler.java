@@ -148,28 +148,42 @@ public class CastleHandler extends RobotHandler
             for (int i=0; i<x_coords.size(); i++){
                 if (x_coords.get(i) == robot.me.x && y_coords.get(i) == robot.me.y) my_index = i; 
             }
-            optimal_map = best[my_index] + 1; 
+            optimal_map = best[my_index]; 
         }
         if (x_coords.size() != 1){
-            if (robot.me.turn <= 5) robot.signal (optimal_map, 2); 
+            // if (robot.me.turn <= 5) robot.signal (optimal_map, 2); 
 
             if (builtPilgrims < 2) {
                 if (robot.karbonite >= 10 && robot.fuel >= 50) {
                     builtPilgrims += 1;
-                    return buildRandom(robot.SPECS.PILGRIM);
+                    Direction dir = buildRandomDirection(robot.SPECS.PILGRIM); 
+                    int new_x = dir.dx + robot.me.x; 
+                    int new_y = dir.dy + robot.me.y; 
+                    robot.signal(((optimal_map << 3) + ((new_y) << 4) + ((new_x) << 10)), 2); 
+                    return robot.buildUnit(robot.SPECS.PILGRIM, dir.dx, dir.dy);
                 }
             } else {
                 return buildRandom(robot.SPECS.CRUSADER);
             }
         }
-        else{
-            if (robot.me.turn <= 5) robot.signal (1, 2); 
-            else if (robot.me.turn <= 7) robot.signal (2, 2); 
-            
-            if (builtPilgrims < 4) {
+        else{            
+            if (builtPilgrims < 2) {
                 if (robot.karbonite >= 10 && robot.fuel >= 50) {
                     builtPilgrims += 1;
-                    return buildRandom(robot.SPECS.PILGRIM);
+                    Direction dir = buildRandomDirection(robot.SPECS.PILGRIM); 
+                    int new_x = dir.dx + robot.me.x; 
+                    int new_y = dir.dy + robot.me.y; 
+                    robot.signal(((0 << 3) + ((new_y) << 4) + ((new_x) << 10)), 2); 
+                    return robot.buildUnit(robot.SPECS.PILGRIM, dir.dx, dir.dy);
+                }
+            } else if (builtPilgrims < 4) {
+                if (robot.karbonite >= 10 && robot.fuel >= 50) {
+                    builtPilgrims += 1;
+                    Direction dir = buildRandomDirection(robot.SPECS.PILGRIM); 
+                    int new_x = dir.dx + robot.me.x; 
+                    int new_y = dir.dy + robot.me.y; 
+                    robot.signal(((1 << 3) + ((new_y) << 4) + ((new_x) << 10)), 2); 
+                    return robot.buildUnit(robot.SPECS.PILGRIM, dir.dx, dir.dy);
                 }
             } else {
                 return buildRandom(robot.SPECS.CRUSADER);
@@ -177,7 +191,17 @@ public class CastleHandler extends RobotHandler
         }
     }
 
-    public Action buildRandom(int unitType) {
+    public Direction buildRandomDirection (int unitType) { 
+        Coordinate myLoc = Coordinate.fromRobot(robot.me);
+        for (int i = 0; i < 10; i++) {
+            Direction buildDir = Utils.getRandom8Direction();
+            if (canTraverse(buildDir.dx + robot.me.x, buildDir.dy + robot.me.y)){
+                return buildDir; 
+            }
+        }
+        return null;
+    }
+    public Action buildRandom(int unitType) { 
         Coordinate myLoc = Coordinate.fromRobot(robot.me);
         for (int i = 0; i < 10; i++) {
             Direction buildDir = Utils.getRandom8Direction();
