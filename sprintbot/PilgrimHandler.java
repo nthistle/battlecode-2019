@@ -28,6 +28,8 @@ public class PilgrimHandler extends RobotHandler
         //store the castle I am assigned to (this is just for the one turn)
         Robot myCastle; 
 
+        // TODO: need to handle case where pilgrim is adjacent to 2 castles
+
         for (Robot r : robot.getVisibleRobots()) {
 
             //check if this robot is a castle on my team
@@ -52,26 +54,6 @@ public class PilgrimHandler extends RobotHandler
 
         //report the castle we have found
         robot.log("Identified Home Castle as " + castleLocation + ", with distance " + closestCastleDistance);
-
-/*
-        Commented Block Below calculates closest fuel cell and makes that target position 
-             (only keeping it here for now just in case we need it, will be deleted later)
-
-        int closestFuelDistance = -1;
-        boolean[][] fuelMap = robot.getFuelMap();
-        for (int y = 0; y < fuelMap.length; y++) {
-            for (int x = 0; x < fuelMap[y].length; x++) {
-                if (!fuelMap[y][x]) continue;
-                if (targetLocation == null || Utils.getDistance(myLoc, new Coordinate(x, y)) < closestFuelDistance) {
-                    targetLocation = new Coordinate(x, y);
-                    closestFuelDistance = Utils.getDistance(myLoc, targetLocation);
-                }
-            }
-        }
-        robot.log("Identified closest Fuel Source as " + targetLocation + ", with distance " + closestFuelDistance);
-        robot.log(robot.map);
-        Utils.getDirectionMap(robot.map, targetLocation.x, targetLocation.y);
-*/
 
         //assume i receive my location from my castle as a 16 bit string
         //    first  6 bits are the x coordinate
