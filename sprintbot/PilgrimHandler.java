@@ -11,25 +11,53 @@ public class PilgrimHandler extends RobotHandler
     Direction[][] targetMap;
     Direction[][] castleMap;
 
+    //the location of the site I am mining (right now we consider pilgrims miners)
     Coordinate targetLocation;
+
+    //the location of the castle site I am connected to (later this could be a church)
     Coordinate castleLocation;
 
     public void setup() {
+
+        //establish a coordinate of where I am when first created
         Coordinate myLoc = Coordinate.fromRobot(robot.me);
 
+        //below established my home castle based on what is the closest to me on my creation
         int closestCastleDistance = -1;
+
+        //store the castle I am assigned to (this is just for the one turn)
+        Robot myCastle; 
+
         for (Robot r : robot.getVisibleRobots()) {
+
+            //check if this robot is a castle on my team
             if (r.team == robot.me.team && r.unit == robot.SPECS.CASTLE) {
-                if (castleLocation == null || Utils.getDistance(myLoc, Coordinate.fromRobot(r)) < closestCastleDistance) {
+
+                //if the castle is the closer than the current closest, update it
+                if (castleLocation == null || 
+                    Utils.getDistance(myLoc, Coordinate.fromRobot(r)) < closestCastleDistance) {
+
+                    //assign the castlelocation to robot r's coordinate, similarly assign distance
                     castleLocation = Coordinate.fromRobot(r);
                     closestCastleDistance = Utils.getDistance(myLoc, castleLocation);
+
+                    //assing closest castle
+                    myCastle = r;
                 }
             }
         }
+
+        //NOTE: above can find issues is two castles are equal distance from me
+        //    this can be fixed by having convention on where robots spawn (or other things as well)
+
+        //report the castle we have found
         robot.log("Identified Home Castle as " + castleLocation + ", with distance " + closestCastleDistance);
 
-        int closestFuelDistance = -1;
+/*
+        Commented Block Below calculates closest fuel cell and makes that target position 
+             (only keeping it here for now just in case we need it, will be deleted later)
 
+        int closestFuelDistance = -1;
         boolean[][] fuelMap = robot.getFuelMap();
         for (int y = 0; y < fuelMap.length; y++) {
             for (int x = 0; x < fuelMap[y].length; x++) {
@@ -40,25 +68,36 @@ public class PilgrimHandler extends RobotHandler
                 }
             }
         }
-
         robot.log("Identified closest Fuel Source as " + targetLocation + ", with distance " + closestFuelDistance);
+        robot.log(robot.map);
+        Utils.getDirectionMap(robot.map, targetLocation.x, targetLocation.y);
+*/
 
-        //robot.log(robot.map);
+        //assume i receive my location from my castle as a 16 bit string
+        //    first  6 bits are the x coordinate
+        //    second 6 bits are the y coordinate
 
-        // Utils.getDirectionMap(robot.map, targetLocation.x, targetLocation.y);
+        //grab the x coordinate by just bitshifting to the left 12
+        int targetX = myCastle.signal >> 10; 
 
+        //grab the y coordinate by bitshifting to the right 4 
+        //    chop off the first 6 bits by taking and with the bistring "111111"
+        int targetY = (myCastle.signal >> 4) & (63);
+
+        //set the target location for good
+        targetLocation =  new Coordinate(targetX, targetY);
+
+        //create the movement map for the target spot
         targetMap = Utils.getDirectionMap(robot.map, targetLocation.x, targetLocation.y);
-        // castleMap = Utils.getDirectionMap(robot.map, myLoc.x, myLoc.y); // assumes we just want to nav back to our spawn, should be okay
-        castleMap = Utils.getDirectionMap(robot.map, castleLocation.x, castleLocation.y); // assumes we just want to nav back to our spawn, should be okay
+
+        //create the movement map to get back to my home castle
+        castleMap = Utils.getDirectionMap(robot.map, castleLocation.x, castleLocation.y); 
 
         robot.log("Pilgrim setup called!");
     }
 
     public Action turn() {
         //robot.log("Pilgrim turn called!");
-
-        //Direction d = Utils.getRandomDirection();
-        //return robot.move(d.dx, d.dy);
 
         if (robot.me.karbonite >= 20 || robot.me.fuel >= 100) {
             // navigate back to base
@@ -91,4 +130,6 @@ public class PilgrimHandler extends RobotHandler
             // return robot.move(targetMap[robot.me.y][robot.me.x].dx, targetMap[robot.me.y][robot.me.x].dy);
         }
     }
+
+
 }
