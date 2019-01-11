@@ -18,30 +18,36 @@ public class PilgrimHandler extends RobotHandler
         Coordinate myLoc = Coordinate.fromRobot(robot.me);
 
         int closestCastleDistance = -1;
+        // TODO: need to handle case where pilgrim is adjacent to 2 castles
+        boolean[][] zMap = robot.getKarboniteMap();
+
+        Robot closest; 
         for (Robot r : robot.getVisibleRobots()) {
             if (r.team == robot.me.team && r.unit == robot.SPECS.CASTLE) {
                 if (castleLocation == null || Utils.getDistance(myLoc, Coordinate.fromRobot(r)) < closestCastleDistance) {
                     castleLocation = Coordinate.fromRobot(r);
                     closestCastleDistance = Utils.getDistance(myLoc, castleLocation);
+                    closest = r; 
                 }
             }
         }
+        if (closest.signal == 2) zMap = robot.getFuelMap();
+
         robot.log("Identified Home Castle as " + castleLocation + ", with distance " + closestCastleDistance);
 
-        int closestFuelDistance = -1;
+        int closestDistance = -1;
 
-        boolean[][] fuelMap = robot.getFuelMap();
-        for (int y = 0; y < fuelMap.length; y++) {
-            for (int x = 0; x < fuelMap[y].length; x++) {
-                if (!fuelMap[y][x]) continue;
-                if (targetLocation == null || Utils.getDistance(myLoc, new Coordinate(x, y)) < closestFuelDistance) {
+        for (int y = 0; y < zMap.length; y++) {
+            for (int x = 0; x < zMap[y].length; x++) {
+                if (!zMap[y][x]) continue;
+                if (targetLocation == null || Utils.getDistance(myLoc, new Coordinate(x, y)) < closestDistance) {
                     targetLocation = new Coordinate(x, y);
-                    closestFuelDistance = Utils.getDistance(myLoc, targetLocation);
+                    closestDistance = Utils.getDistance(myLoc, targetLocation);
                 }
             }
         }
 
-        robot.log("Identified closest Fuel Source as " + targetLocation + ", with distance " + closestFuelDistance);
+        robot.log("Identified closest Fuel Source as " + targetLocation + ", with distance " + closestDistance);
 
         //robot.log(robot.map);
 
