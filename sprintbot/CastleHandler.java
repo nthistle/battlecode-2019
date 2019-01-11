@@ -47,6 +47,7 @@ public class CastleHandler extends RobotHandler
     List <Integer> x_coords; 
     List <Integer> y_coords; 
     int optimal_map = -1; 
+    int my_index = -1; // this castle's position in x_coords
     public int[][] dirs = {{0,1},{1,0},{0,-1},{-1,0}};
 
     public void setup() {
@@ -144,7 +145,7 @@ public class CastleHandler extends RobotHandler
                     }
                 }
             }
-            int my_index = -1; 
+            my_index = -1; 
             for (int i=0; i<x_coords.size(); i++){
                 if (x_coords.get(i) == robot.me.x && y_coords.get(i) == robot.me.y) my_index = i; 
             }
@@ -163,7 +164,10 @@ public class CastleHandler extends RobotHandler
                     return robot.buildUnit(robot.SPECS.PILGRIM, dir.dx, dir.dy);
                 }
             } else {
-                return buildRandom(robot.SPECS.CRUSADER);
+                // temporary fix to crusader logic
+                if (robot.me.turn % (x_coords.size()) == my_index){
+                    return buildRandom(robot.SPECS.CRUSADER);
+                }
             }
         }
         else{            
@@ -189,11 +193,12 @@ public class CastleHandler extends RobotHandler
                 return buildRandom(robot.SPECS.CRUSADER);
             }
         }
+        return null;
     }
 
     public Direction buildRandomDirection (int unitType) { 
         Coordinate myLoc = Coordinate.fromRobot(robot.me);
-        for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < 30; i++) {
             Direction buildDir = Utils.getRandom8Direction();
             if (canTraverse(buildDir.dx + robot.me.x, buildDir.dy + robot.me.y)){
                 return buildDir; 
@@ -203,7 +208,7 @@ public class CastleHandler extends RobotHandler
     }
     public Action buildRandom(int unitType) { 
         Coordinate myLoc = Coordinate.fromRobot(robot.me);
-        for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < 30; i++) {
             Direction buildDir = Utils.getRandom8Direction();
             if (canTraverse(buildDir.dx + robot.me.x, buildDir.dy + robot.me.y)){
                 return robot.buildUnit(unitType, buildDir.dx, buildDir.dy);
