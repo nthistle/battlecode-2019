@@ -29,6 +29,9 @@ public class PilgrimHandler extends RobotHandler
         Robot myCastle; 
 
         // TODO: need to handle case where pilgrim is adjacent to 2 castles
+        // SOLVED
+        
+        boolean[][] zMap = robot.getKarboniteMap();
 
         for (Robot r : robot.getVisibleRobots()) {
 
@@ -42,13 +45,24 @@ public class PilgrimHandler extends RobotHandler
                     //assign the castlelocation to robot r's coordinate, similarly assign distance
                     castleLocation = Coordinate.fromRobot(r);
                     closestCastleDistance = Utils.getDistance(myLoc, castleLocation);
+                    
+                    if (r.signal != -1){ // make sure we have a signal
+                        int rX = r.signal >> 10; // X location of signaled pilgrim
+                        int rY = (r.signal >> 4) & (63); // Y loc of signaled pilgrim
+                        int resource_type = (r.signal >> 3) & 1; // resource they should deliver
+                        if (rX == robot.me.x && rY == robot.me.y){ // we have the right pilgrim
+                            if (resource_type == 1) zMap = robot.getFuelMap(); 
 
-                    //assing closest castle
-                    myCastle = r;
+                            //assign closest castle
+                            myCastle = r;
+                            robot.log("RESOURCE_TYPE: " + resource_type);
+                        }
+                    }
                 }
             }
         }
 
+        /*
         //NOTE: above can find issues is two castles are equal distance from me
         //    this can be fixed by having convention on where robots spawn (or other things as well)
 
@@ -74,6 +88,31 @@ public class PilgrimHandler extends RobotHandler
 
         //create the movement map to get back to my home castle
         castleMap = Utils.getDirectionMap(robot.map, castleLocation.x, castleLocation.y); 
+
+        robot.log("Pilgrim setup called!");
+        */
+
+        int closestDistance = -1;
+
+        for (int y = 0; y < zMap.length; y++) {
+            for (int x = 0; x < zMap[y].length; x++) {
+                if (!zMap[y][x]) continue;
+                if (targetLocation == null || Utils.getDistance(myLoc, new Coordinate(x, y)) < closestDistance) {
+                    targetLocation = new Coordinate(x, y);
+                    closestDistance = Utils.getDistance(myLoc, targetLocation);
+                }
+            }
+        }
+
+        robot.log("Identified closest Fuel Source as " + targetLocation + ", with distance " + closestDistance);
+
+        //robot.log(robot.map);
+
+        // Utils.getDirectionMap(robot.map, targetLocation.x, targetLocation.y);
+
+        targetMap = Utils.getDirectionMap(robot.map, targetLocation.x, targetLocation.y);
+        // castleMap = Utils.getDirectionMap(robot.map, myLoc.x, myLoc.y); // assumes we just want to nav back to our spawn, should be okay
+        castleMap = Utils.getDirectionMap(robot.map, castleLocation.x, castleLocation.y); // assumes we just want to nav back to our spawn, should be okay
 
         robot.log("Pilgrim setup called!");
     }
