@@ -64,10 +64,10 @@ public class Utils
 
         distMap[y][x] = 0;
 
-        while (queue.size() > 0) [
+        while (queue.size() > 0) {
             Coordinate c = queue.poll();
 
-            for (Direction dir : direction) {
+            for (Direction dir : directions) {
                 Coordinate n = c.add(dir);
                 if (isInRange(terrain, n) && isPassable(terrain, n) && distMap[n.y][n.x] == 5000) {
                     distMap[n.y][n.x] = distMap[c.y][c.x] + 1;
