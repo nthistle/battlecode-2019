@@ -17,6 +17,8 @@ public class PilgrimHandler extends RobotHandler
     //the location of the castle site I am connected to (later this could be a church)
     Coordinate castleLocation;
 
+    boolean requiresCastleSignal = true;
+
     public void setup() {
 
         //establish a coordinate of where I am when first created
@@ -30,8 +32,6 @@ public class PilgrimHandler extends RobotHandler
 
         // TODO: need to handle case where pilgrim is adjacent to 2 castles
         // SOLVED
-        
-        boolean[][] zMap = robot.getKarboniteMap();
 
         for (Robot r : robot.getVisibleRobots()) {
 
@@ -39,82 +39,33 @@ public class PilgrimHandler extends RobotHandler
             if (r.team == robot.me.team && r.unit == robot.SPECS.CASTLE) {
 
                 //if the castle is the closer than the current closest, update it
-                if (castleLocation == null || 
-                    Utils.getDistance(myLoc, Coordinate.fromRobot(r)) < closestCastleDistance) {
+                if ((castleLocation == null || Utils.getDistance(myLoc, Coordinate.fromRobot(r)) < closestCastleDistance)
+                      && (!requiresCastleSignal || r.signal != -1)) {
 
                     //assign the castlelocation to robot r's coordinate, similarly assign distance
                     castleLocation = Coordinate.fromRobot(r);
                     closestCastleDistance = Utils.getDistance(myLoc, castleLocation);
-                    
-                    if (r.signal != -1){ // make sure we have a signal
-                        int rX = r.signal >> 10; // X location of signaled pilgrim
-                        int rY = (r.signal >> 4) & (63); // Y loc of signaled pilgrim
-                        int resource_type = (r.signal >> 3) & 1; // resource they should deliver
-                        if (rX == robot.me.x && rY == robot.me.y){ // we have the right pilgrim
-                            if (resource_type == 1) zMap = robot.getFuelMap(); 
-
-                            //assign closest castle
-                            myCastle = r;
-                            robot.log("RESOURCE_TYPE: " + resource_type);
-                        }
-                    }
+                    myCastle = r;
                 }
             }
         }
 
-        /*
-        //NOTE: above can find issues is two castles are equal distance from me
-        //    this can be fixed by having convention on where robots spawn (or other things as well)
-
-        //report the castle we have found
-        robot.log("Identified Home Castle as " + castleLocation + ", with distance " + closestCastleDistance);
-
-        //assume i receive my location from my castle as a 16 bit string
-        //    first  6 bits are the x coordinate
-        //    second 6 bits are the y coordinate
-
-        //grab the x coordinate by just bitshifting to the left 12
-        int targetX = myCastle.signal >> 10; 
-
-        //grab the y coordinate by bitshifting to the right 4 
-        //    chop off the first 6 bits by taking and with the bistring "111111"
-        int targetY = (myCastle.signal >> 4) & (63);
-
-        //set the target location for good
-        targetLocation =  new Coordinate(targetX, targetY);
-
-        //create the movement map for the target spot
-        targetMap = Utils.getDirectionMap(robot.map, targetLocation.x, targetLocation.y);
-
-        //create the movement map to get back to my home castle
-        castleMap = Utils.getDirectionMap(robot.map, castleLocation.x, castleLocation.y); 
-
-        robot.log("Pilgrim setup called!");
-        */
-
-        int closestDistance = -1;
-
-        for (int y = 0; y < zMap.length; y++) {
-            for (int x = 0; x < zMap[y].length; x++) {
-                if (!zMap[y][x]) continue;
-                if (targetLocation == null || Utils.getDistance(myLoc, new Coordinate(x, y)) < closestDistance) {
-                    targetLocation = new Coordinate(x, y);
-                    closestDistance = Utils.getDistance(myLoc, targetLocation);
-                }
-            }
+        if (myCastle.signal == -1) {
+            robot.log("ERROR! COULD NOT FIND A SIGNAL FROM MY HOME CASTLE");
         }
 
-        robot.log("Identified closest Fuel Source as " + targetLocation + ", with distance " + closestDistance);
+        // this will probably work really badly if we don't receive a signal, 
+        // TODO is to put some placeholder values in here so we don't get anything
+        // fatal in an edge case
 
-        //robot.log(robot.map);
+        int targetX = myCastle.signal >> 10; // parsed target x
+        int targetY = (myCastle.signal >> 4) & (63); // parsed target y
 
-        // Utils.getDirectionMap(robot.map, targetLocation.x, targetLocation.y);
+        targetLocation = new Coordinate(targetX, targetY);
+        robot.log("Identified signaled location as " + targetLocation);
 
         targetMap = Utils.getDirectionMap(robot.map, targetLocation.x, targetLocation.y);
-        // castleMap = Utils.getDirectionMap(robot.map, myLoc.x, myLoc.y); // assumes we just want to nav back to our spawn, should be okay
-        castleMap = Utils.getDirectionMap(robot.map, castleLocation.x, castleLocation.y); // assumes we just want to nav back to our spawn, should be okay
-
-        robot.log("Pilgrim setup called!");
+        castleMap = Utils.getDirectionMap(robot.map, castleLocation.x, castleLocation.y);
     }
 
     public Action turn() {
