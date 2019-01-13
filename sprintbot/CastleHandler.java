@@ -20,7 +20,13 @@ public class CastleHandler extends RobotHandler
 
     ArrayList<Coordinate> myAssignedKarbonite;
     ArrayList<Coordinate> myAssignedFuel;
+    int numAssignedKarbonite = 0;
+    int numAssignedFuel = 0;
+
+
     int[][][] distanceMaps;
+
+    boolean DEBUG = false; // more time intensive when printing
 
     public void setup() {
         receivingCastleInfo = true;
@@ -35,14 +41,18 @@ public class CastleHandler extends RobotHandler
                 ourCastleNum += 1;
                 if ((r.castle_talk & 2) == 2) { // this bit is only set if a castle that went before
                     // spawned something, so we know to not count it as a castle
-                    robot.log("Detected a friendly Castle as having spawned a unit turn 1 before this!");
+                    if (DEBUG) {
+                        robot.log("Detected a friendly Castle as having spawned a unit turn 1 before this!");
+                    }
                     otherSpawnedUnits++;
                 }
             }
         }
 
-        robot.log("Detected self as Castle #" + ourCastleNum);
-        robot.log("My coordinates are " + robot.me.x + "," + robot.me.y);
+        if (DEBUG) {
+            robot.log("Detected self as Castle #" + ourCastleNum);
+            robot.log("My coordinates are " + robot.me.x + "," + robot.me.y);
+        }
 
         numCastles = -otherSpawnedUnits;
         for (Robot r : robot.getVisibleRobots()) {
@@ -51,7 +61,10 @@ public class CastleHandler extends RobotHandler
             }
         }
 
-        robot.log("Detected " + numCastles + " castles!");
+        if (DEBUG) {
+            robot.log("Detected " + numCastles + " castles!");
+        }
+
         castleX = new int[numCastles];
         castleY = new int[numCastles];
         castleIDs = new int[numCastles];
@@ -106,29 +119,85 @@ public class CastleHandler extends RobotHandler
             }
         }
 
-        robot.log("Detected other castle IDs as:");
-        robot.log("Castles[0] = " + castleIDs[0]);
-        if (numCastles > 1)
-            robot.log("Castles[1] = " + castleIDs[1]);
-        if (numCastles > 2)
-            robot.log("Castles[2] = " + castleIDs[2]);
+        if (DEBUG) {
+            robot.log("Detected other castle IDs as:");
+            robot.log("Castles[0] = " + castleIDs[0]);
+            if (numCastles > 1)
+                robot.log("Castles[1] = " + castleIDs[1]);
+            if (numCastles > 2)
+                robot.log("Castles[2] = " + castleIDs[2]);
+        }
     }
 
 
     public Action turn() {
-        robot.log("Starting turn #" + robot.me.turn);
-        if (receivingCastleInfo) {
+        //if (DEBUG) {
+            robot.log("Starting turn #" + robot.me.turn);
+        //}
+
+        if (receivingCastleInfo) {  
             receiveCastleInfo();
         } else if (!hasSymmetricAssigned) {
+            // robot.log("T:" + System.currentTimeMillis());
             doSymmetricAssignmentScheme();
             hasSymmetricAssigned = true;
-            robot.log("I have been assigned " + myAssignedKarbonite.size() + " karb and " + myAssignedFuel.size() + " fuel");
+            // robot.log("T:" + System.currentTimeMillis());
+            if (DEBUG) {
+                robot.log("I have been assigned " + myAssignedKarbonite.size() + " karb and " + myAssignedFuel.size() + " fuel");
+            }
         }
         boolean builtUnitThisTurn = false;
         // NOTE: if you spawn a unit on your first turn as a castle (probably not pilgrim, since those
         // will need to be assigned), you MUST set this boolean so other castles don't get confused
 
 
+        // E C O
+        // this has a bias towards castle earlier in turnq but ignore it for now
+        // 52 because we need 2 fuel to broadcast its destination
+        if (hasSymmetricAssigned && robot.karbonite >= 10 && robot.fuel >= 52 && (numAssignedKarbonite < myAssignedKarbonite.size() || numAssignedFuel < myAssignedFuel.size())) {
+            // fetch next location to assign
+            boolean isKarb;
+            if (numAssignedKarbonite < myAssignedKarbonite.size() && numAssignedFuel < myAssignedFuel.size()) {
+                isKarb = numAssignedKarbonite >= numAssignedFuel;
+            } else if (numAssignedKarbonite < myAssignedKarbonite.size()) {
+                isKarb = true;
+            } else {
+                isKarb = false;
+            }
+
+            Coordinate assignedTarget = (isKarb ? myAssignedKarbonite : myAssignedFuel).get(isKarb ? numAssignedKarbonite : numAssignedFuel);
+
+            if (DEBUG) {
+                robot.log("Doing assignment of " + (isKarb ? "KARBONITE" : "FUEL") + " at location " + assignedTarget);
+            }
+
+            int[][] tDistMap = Utils.getDistanceMap(robot.map, assignedTarget);
+            int minDist = 5000;
+            Direction bestDir = null;
+
+            Coordinate myLoc = Coordinate.fromRobot(robot.me);
+
+            for (Direction dir : Utils.dir8) {
+                Coordinate n = myLoc.add(dir);
+                if (Utils.isInRange(robot.map, n) && Utils.isPassable(robot.map, n) && !Utils.isOccupied(robot.getVisibleRobotMap(), n)) {
+                    if (tDistMap[n.y][n.x] < minDist) {
+                        minDist = tDistMap[n.y][n.x];
+                        bestDir = dir;
+                    }
+                }
+            }
+
+            // for some reason, we're completely blocked, so no build this turn
+            if (bestDir != null) {
+                // this is the best direction to build in
+
+                if (isKarb) numAssignedKarbonite++;
+                else numAssignedFuel++;
+
+                robot.signal((assignedTarget.x << 10) | (assignedTarget.y << 4), 2);
+                return robot.buildUnit(robot.SPECS.PILGRIM, bestDir.dx, bestDir.dy);
+            }
+        }
 
 
         if (robot.me.turn <= 2) {
@@ -154,6 +223,10 @@ public class CastleHandler extends RobotHandler
         // aren't ourselves isn't guaranteed). use smallest castle ID for tiebreak
         myAssignedKarbonite = new ArrayList<Coordinate>();
         myAssignedFuel = new ArrayList<Coordinate>();
+
+        if (DEBUG) {
+            robot.log("Doing symmetric assignment!");
+        }
 
         for (int y = 0; y < robot.karboniteMap.length; y++) {
             for (int x = 0; x < robot.karboniteMap[y].length; x++) {
@@ -210,7 +283,9 @@ public class CastleHandler extends RobotHandler
                         castleX[thisCastleNum] = sentValue;
                     } else if (castleY[thisCastleNum] == -1) {
                         castleY[thisCastleNum] = sentValue;
-                        robot.log("Detected Castle with ID " + castleIDs[thisCastleNum] + "'s location as " + castleX[thisCastleNum] + "," + castleY[thisCastleNum]);
+                        if (DEBUG) {
+                            robot.log("Detected Castle with ID " + castleIDs[thisCastleNum] + "'s location as " + castleX[thisCastleNum] + "," + castleY[thisCastleNum]);
+                        }
                     }
                 }
             }
@@ -224,7 +299,7 @@ public class CastleHandler extends RobotHandler
             }
         }
         receivingCastleInfo = anyRemaining;
-        if (!anyRemaining) {
+        if (DEBUG && !anyRemaining) {
             robot.log("All done detecting!");
         }
     }
