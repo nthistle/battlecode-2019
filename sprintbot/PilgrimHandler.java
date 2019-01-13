@@ -71,6 +71,8 @@ public class PilgrimHandler extends RobotHandler
     public Action turn() {
         //robot.log("Pilgrim turn called!");
 
+        int mspeed = Utils.min(4, robot.fuel);
+
         if (robot.me.karbonite >= 20 || robot.me.fuel >= 100) {
             // navigate back to base
 
@@ -85,21 +87,41 @@ public class PilgrimHandler extends RobotHandler
             }
 
             // just walk towards base
-            Direction d = Utils.followDirectionMap(castleMap, robot.getVisibleRobotMap(), 4, robot.me.x, robot.me.y);
-            robot.log("Trying to move " + d);
-            return robot.move(d.dx, d.dy);
-            // return robot.move(castleMap[robot.me.y][robot.me.x].dx, castleMap[robot.me.y][robot.me.x].dy);
+            Direction dir = Utils.followDirectionMap(castleMap, robot.getVisibleRobotMap(), mspeed, robot.me.x, robot.me.y);
+
+            int ctr = 0;
+            while (dir.equals(Utils.STATIONARY) && (ctr++) < 10) {
+                dir = Utils.followDirectionMapFuzz(castleMap, robot.getVisibleRobotMap(), mspeed, robot.me.x, robot.me.y);
+            }
+
+            if (dir.equals(Utils.STATIONARY)) {
+                robot.log("Can't move!");
+                return null; // TODO: make it mine if it can
+            }
+
+            return robot.move(dir.dx, dir.dy);
         } else {
             // navigate towards karb/fuel and mine if applicable
 
-            if (robot.getFuelMap()[robot.me.y][robot.me.x] || robot.getKarboniteMap()[robot.me.y][robot.me.x]) {
+            // TODO: check to make sure this square is actually mine-able
+            if (Coordinate.fromRobot(robot.me).equals(targetLocation)) {
+//            if (robot.getFuelMap()[robot.me.y][robot.me.x] || robot.getKarboniteMap()[robot.me.y][robot.me.x]) {
                 return robot.mine();
             } 
 
-            Direction d = Utils.followDirectionMap(targetMap, robot.getVisibleRobotMap(), 4, robot.me.x, robot.me.y);
-            robot.log("Trying to move " + d);
-            return robot.move(d.dx, d.dy);
-            // return robot.move(targetMap[robot.me.y][robot.me.x].dx, targetMap[robot.me.y][robot.me.x].dy);
+            Direction dir = Utils.followDirectionMap(targetMap, robot.getVisibleRobotMap(), mspeed, robot.me.x, robot.me.y);
+
+            int ctr = 0;
+            while (dir.equals(Utils.STATIONARY) && (ctr++) < 10) {
+                dir = Utils.followDirectionMapFuzz(targetMap, robot.getVisibleRobotMap(), mspeed, robot.me.x, robot.me.y);
+            }
+
+            if (dir.equals(Utils.STATIONARY)) {
+                robot.log("Can't move!");
+                return null; // TODO: make it mine if it can
+            }
+
+            return robot.move(dir.dx, dir.dy);
         }
     }
 
