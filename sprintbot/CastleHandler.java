@@ -1,54 +1,12 @@
 package bc19;
-import java.util.*; 
 
-/*
-Standard pair class
-*/
-class Pair {
-    public int first;
-    public int second;
-
-    public Pair(int first, int second) {
-        super();
-        this.first = first;
-        this.second = second;
-    }
-
-    public int hashCode() {
-        int hashFirst = first;
-        int hashSecond = second;
-
-        return (hashFirst + hashSecond) * hashSecond + hashFirst;
-    }
-
-    public boolean equals(Object other) {
-        if (other instanceof Pair) {
-            Pair otherPair = (Pair) other;
-            return (otherPair.first == this.first && otherPair.second == this.second);
-        }
-
-        return false;
-    }
-
-    public String toString()
-    {
-           return "(" + first + ", " + second + ")";
-    }
-}
+import java.util.ArrayList;
 
 public class CastleHandler extends RobotHandler 
 {
     public CastleHandler(MyRobot robot) {
         super(robot);
     }
-
-
-    int builtPilgrims = 0;
-    List <Integer> x_coords; 
-    List <Integer> y_coords; 
-    int optimal_map = -1; 
-    int my_index = -1; // this castle's position in x_coords
-    public int[][] dirs = {{0,1},{1,0},{0,-1},{-1,0}};
 
     int ourCastleNum; // IS GUARANTEED to be our order in the turn queue
     int numCastles;
@@ -58,10 +16,15 @@ public class CastleHandler extends RobotHandler
     // Also not guaranteed to be fully set until after identification process (if we're 2nd castle)
 
     boolean receivingCastleInfo;
+    boolean hasSymmetricAssigned;
+
+    ArrayList<Coordinate> myAssignedKarbonite;
+    ArrayList<Coordinate> myAssignedFuel;
+    int[][][] distanceMaps;
 
     public void setup() {
-
         receivingCastleInfo = true;
+        hasSymmetricAssigned = false;
 
         // first, we have to detect which number castle we are
         // for this, we just count the number of broadcasting castleTalks with LSB set
@@ -92,6 +55,7 @@ public class CastleHandler extends RobotHandler
         castleX = new int[numCastles];
         castleY = new int[numCastles];
         castleIDs = new int[numCastles];
+        distanceMaps = new int[numCastles][][];
 
         for (int i = 0; i < numCastles; i++) {
             castleX[i] = -1;
@@ -144,8 +108,10 @@ public class CastleHandler extends RobotHandler
 
         robot.log("Detected other castle IDs as:");
         robot.log("Castles[0] = " + castleIDs[0]);
-        robot.log("Castles[1] = " + castleIDs[1]);
-        robot.log("Castles[2] = " + castleIDs[2]);
+        if (numCastles > 1)
+            robot.log("Castles[1] = " + castleIDs[1]);
+        if (numCastles > 2)
+            robot.log("Castles[2] = " + castleIDs[2]);
     }
 
 /*
@@ -187,6 +153,78 @@ public class CastleHandler extends RobotHandler
     }
 */
 
+    public Action turn() {
+        robot.log("Starting turn #" + robot.me.turn);
+        if (receivingCastleInfo) {
+            receiveCastleInfo();
+        } else if (!hasSymmetricAssigned) {
+            doSymmetricAssignmentScheme();
+            hasSymmetricAssigned = true;
+            robot.log("I have been assigned " + myAssignedKarbonite.size() + " karb and " + myAssignedFuel.size() + " fuel");
+        }
+        boolean builtUnitThisTurn = false;
+        // NOTE: if you spawn a unit on your first turn as a castle (probably not pilgrim, since those
+        // will need to be assigned), you MUST set this boolean so other castles don't get confused
+
+
+
+
+        if (robot.me.turn <= 2) {
+            int markerBits = builtUnitThisTurn ? 3 : 1;
+            if (robot.me.turn == 1) {
+                robot.castleTalk((robot.me.x << 2) | markerBits);
+            } else if (robot.me.turn == 2) {
+                robot.castleTalk((robot.me.y << 2) | markerBits);
+            }
+        }
+        return null;
+    }
+
+
+    public void doSymmetricAssignmentScheme() {
+        // first draw up the distance maps for all the castles
+        for (int i = 0; i < numCastles; i++) {
+            distanceMaps[i] = Utils.getDistanceMap(robot.map, castleX[i], castleY[i]);
+        }
+
+        // TODO: take into account which clusters are closer to enemy
+        // TODO: correctly handle tie behavior (it would work, but the ordering of castles that
+        // aren't ourselves isn't guaranteed). use smallest castle ID for tiebreak
+        myAssignedKarbonite = new ArrayList<Coordinate>();
+        myAssignedFuel = new ArrayList<Coordinate>();
+
+        for (int y = 0; y < robot.karboniteMap.length; y++) {
+            for (int x = 0; x < robot.karboniteMap[y].length; x++) {
+                if (!robot.karboniteMap[y][x]) continue;
+                int assignedTo = 0;
+                for (int c = 1; c < numCastles; c++) { // technically, ties aren't handled correctly
+                    if (distanceMaps[c][y][x] < distanceMaps[assignedTo][y][x]) {
+                        assignedTo = c;
+                    }
+                }
+                if (assignedTo == ourCastleNum) {
+                    myAssignedKarbonite.add(new Coordinate(x, y));
+                }
+            }
+        }
+
+        for (int y = 0; y < robot.fuelMap.length; y++) {
+            for (int x = 0; x < robot.fuelMap[y].length; x++) {
+                if (!robot.fuelMap[y][x]) continue;
+                int assignedTo = 0;
+                for (int c = 1; c < numCastles; c++) { // technically, ties aren't handled correctly
+                    if (distanceMaps[c][y][x] < distanceMaps[assignedTo][y][x]) {
+                        assignedTo = c;
+                    }
+                }
+                if (assignedTo == ourCastleNum) {
+                    myAssignedFuel.add(new Coordinate(x, y));
+                }
+            }
+        }
+    }
+
+
     public void receiveCastleInfo() {
         for (Robot r : robot.getVisibleRobots()) {
             if (r.team == robot.me.team && r.id != robot.me.id) {
@@ -227,30 +265,6 @@ public class CastleHandler extends RobotHandler
         if (!anyRemaining) {
             robot.log("All done detecting!");
         }
-    }
-
-
-    public Action turn() {
-        robot.log("Starting turn #" + robot.me.turn);
-        if (receivingCastleInfo) {
-            receiveCastleInfo();
-        }
-        boolean builtUnitThisTurn = false;
-        // NOTE: if you spawn a unit on your first turn as a castle (probably not pilgrim, since those
-        // will need to be assigned), you MUST set this boolean so other castles don't get confused
-
-
-
-
-        if (robot.me.turn <= 2) {
-            int markerBits = builtUnitThisTurn ? 3 : 1;
-            if (robot.me.turn == 1) {
-                robot.castleTalk((robot.me.x << 2) | markerBits);
-            } else if (robot.me.turn == 2) {
-                robot.castleTalk((robot.me.y << 2) | markerBits);
-            }
-        }
-        return null;
     }
 }
     /*
