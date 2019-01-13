@@ -14,6 +14,7 @@ public class Utils
         new Direction(-1, 0), new Direction(-1, -1), new Direction(0, -1),
         new Direction(1, -1)};
 
+    public static final Direction STATIONARY = new Direction(0, 0);
 
     // Utils methods
 
@@ -79,6 +80,10 @@ public class Utils
         return distMap;
     }
 
+    public static int[][] getDistanceMap(boolean[][] terrain, Coordinate c) {
+        return getDistanceMap(terrain, c.x, c.y);
+    }
+
     // Tries to follow dirMap as far as possible, given distanceAllowed and robotMap
     // Note that this doesn't converge to optimal pathing behavior, but works well enough.
     public static Direction followDirectionMap(Direction[][] dirMap, int[][] robotMap, 
@@ -90,8 +95,10 @@ public class Utils
         Coordinate originalLoc = new Coordinate(x, y);
         Coordinate cumulativeLoc = originalLoc;
 
+        Direction nextDir;
+
         while (getDistance(originalLoc, cumulativeLoc) < distanceAllowed) {
-            Direction nextDir = dirMap[cumulativeLoc.y][cumulativeLoc.x];
+            nextDir = dirMap[cumulativeLoc.y][cumulativeLoc.x];
             if (nextDir.dx == 0 && nextDir.dy == 0) break;
             cumulativeDirs.add(nextDir);
             cumulativeLoc = cumulativeLoc.add(nextDir);
@@ -106,10 +113,57 @@ public class Utils
         return originalLoc.dirTo(cumulativeLoc);
     }
 
+
     public static Direction followDirectionMap(Direction[][] dirMap, int[][] robotMap,
         int distanceAllowed, Coordinate c) {
         return followDirectionMap(dirMap, robotMap, distanceAllowed, c.x, c.y);
     }
+
+    // adds a random vector at each step, in the hopes of letting it move around
+    // obstacles. in particular, supposed to help with map with seed 23, where other
+    // fuel/karb deposits block the path of bots trying to reach the castle
+    public static Direction followDirectionMapFuzz(Direction[][] dirMap, int[][] robotMap, 
+            int distanceAllowed, int x, int y) {
+
+        if (dirMap[y][x] == null) return null;
+
+        ArrayList<Direction> cumulativeDirs = new ArrayList<Direction>();
+        Coordinate originalLoc = new Coordinate(x, y);
+        Coordinate cumulativeLoc = originalLoc;
+
+        Coordinate tentative;
+        Direction randDir;
+
+        Direction nextDir;
+
+        while (getDistance(originalLoc, cumulativeLoc) < distanceAllowed) {
+            nextDir = dirMap[cumulativeLoc.y][cumulativeLoc.x];
+            if (nextDir.dx == 0 && nextDir.dy == 0) break;
+            cumulativeDirs.add(nextDir);
+            cumulativeLoc = cumulativeLoc.add(nextDir);
+
+            randDir = directions[(int)(Math.random() * directions.length)];
+            tentative = cumulativeLoc.add(randDir);
+            if (dirMap[tentative.y][tentative.x] != null) {
+                cumulativeDirs.add(randDir);
+                cumulativeLoc = tentative;
+            }
+        }
+
+        // go backwards until we hit unoccupied
+        int lastIdx = cumulativeDirs.size();
+        while ((getDistance(originalLoc, cumulativeLoc) > distanceAllowed || isOccupied(robotMap, cumulativeLoc)) && lastIdx > 0) {
+            cumulativeLoc = cumulativeLoc.subtract(cumulativeDirs.get(--lastIdx));
+        }
+
+        return originalLoc.dirTo(cumulativeLoc);
+    }
+
+    public static Direction followDirectionMapFuzz(Direction[][] dirMap, int[][] robotMap,
+        int distanceAllowed, Coordinate c) {
+        return followDirectionMap(dirMap, robotMap, distanceAllowed, c.x, c.y);
+    }
+
 
     // shuffles array in place
     public static <E> void shuffleArray(E[] array) {
