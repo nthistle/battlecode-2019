@@ -134,7 +134,6 @@ public class CastleHandler extends RobotHandler
         //if (DEBUG) {
             robot.log("Starting turn #" + robot.me.turn);
         //}
-
         if (receivingCastleInfo) {  
             receiveCastleInfo();
         } else if (!hasSymmetricAssigned) {
@@ -208,7 +207,8 @@ public class CastleHandler extends RobotHandler
                 robot.castleTalk((robot.me.y << 2) | markerBits);
             }
         }
-        return null;
+        Direction dr = Utils.getRandomDirection(); 
+        return robot.buildUnit(robot.SPECS.PROPHET, dr.dx, dr.dy);
     }
 
 
