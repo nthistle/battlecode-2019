@@ -18,6 +18,8 @@ public class CastleHandler extends RobotHandler
     boolean receivingCastleInfo;
     boolean hasSymmetricAssigned;
 
+    boolean mapSymmetry;
+
     ArrayList<Coordinate> myAssignedKarbonite;
     ArrayList<Coordinate> myAssignedFuel;
     int numAssignedKarbonite = 0;
@@ -127,19 +129,24 @@ public class CastleHandler extends RobotHandler
             if (numCastles > 2)
                 robot.log("Castles[2] = " + castleIDs[2]);
         }
+
+        mapSymmetry = Utils.getSymmetry(robot.map, robot.karboniteMap, robot.fuelMap);
     }
 
 
     public Action turn() {
-        //if (DEBUG) {
+        if (DEBUG) {
             robot.log("Starting turn #" + robot.me.turn);
-        //}
+        }
 
         if (receivingCastleInfo) {  
             receiveCastleInfo();
-        } else if (!hasSymmetricAssigned) {
-            // robot.log("T:" + System.currentTimeMillis());
+        }
+        else if (!hasSymmetricAssigned) { // we could technically do this a turn earlier but I'm more comfortable
+            // with an extra 20ms to do this and we have to be careful that the building process doesn't get triggered
+            // before we can send those signals (will cause other castles to hang)
             doSymmetricAssignmentScheme();
+            sortTargets();
             hasSymmetricAssigned = true;
             // robot.log("T:" + System.currentTimeMillis());
             if (DEBUG) {
@@ -158,7 +165,7 @@ public class CastleHandler extends RobotHandler
             // fetch next location to assign
             boolean isKarb;
             if (numAssignedKarbonite < myAssignedKarbonite.size() && numAssignedFuel < myAssignedFuel.size()) {
-                isKarb = numAssignedKarbonite >= numAssignedFuel;
+                isKarb = numAssignedKarbonite <= numAssignedFuel;
             } else if (numAssignedKarbonite < myAssignedKarbonite.size()) {
                 isKarb = true;
             } else {
@@ -228,32 +235,32 @@ public class CastleHandler extends RobotHandler
             robot.log("Doing symmetric assignment!");
         }
 
+        Coordinate orig; // for reflection purposes
+        Coordinate refl;
+
         for (int y = 0; y < robot.karboniteMap.length; y++) {
             for (int x = 0; x < robot.karboniteMap[y].length; x++) {
-                if (!robot.karboniteMap[y][x]) continue;
+                if (!robot.fuelMap[y][x] && !robot.karboniteMap[y][x]) continue;
                 int assignedTo = 0;
                 for (int c = 1; c < numCastles; c++) { // technically, ties aren't handled correctly
                     if (distanceMaps[c][y][x] < distanceMaps[assignedTo][y][x]) {
                         assignedTo = c;
                     }
                 }
-                if (assignedTo == ourCastleNum) {
-                    myAssignedKarbonite.add(new Coordinate(x, y));
-                }
-            }
-        }
 
-        for (int y = 0; y < robot.fuelMap.length; y++) {
-            for (int x = 0; x < robot.fuelMap[y].length; x++) {
-                if (!robot.fuelMap[y][x]) continue;
-                int assignedTo = 0;
-                for (int c = 1; c < numCastles; c++) { // technically, ties aren't handled correctly
-                    if (distanceMaps[c][y][x] < distanceMaps[assignedTo][y][x]) {
-                        assignedTo = c;
-                    }
-                }
+                orig = new Coordinate(x, y);
+                refl = Utils.getReflected(robot.map, orig, mapSymmetry);
+                //robot.log("Coordinate is " + x + "," + y + " reflected is " + refl);
+                if (distanceMaps[assignedTo][y][x] > distanceMaps[assignedTo][refl.y][refl.x]) 
+                    continue;
+                // skip any points that are further than their reflected location
+
                 if (assignedTo == ourCastleNum) {
-                    myAssignedFuel.add(new Coordinate(x, y));
+                    if (robot.karboniteMap[y][x]) {
+                        myAssignedKarbonite.add(orig);
+                    } else {
+                        myAssignedFuel.add(orig);
+                    }
                 }
             }
         }
@@ -301,6 +308,73 @@ public class CastleHandler extends RobotHandler
         receivingCastleInfo = anyRemaining;
         if (DEBUG && !anyRemaining) {
             robot.log("All done detecting!");
+        }
+    }
+
+
+    public void sortTargets() {
+        Coordinate[] assignedKarb = new Coordinate[myAssignedKarbonite.size()];
+        Coordinate[] assignedFuel = new Coordinate[myAssignedFuel.size()];
+
+        for (int i = 0; i < assignedKarb.length; i++) {
+            assignedKarb[i] = myAssignedKarbonite.get(i);
+        }
+
+        for (int i = 0; i < assignedFuel.length; i++) {
+            assignedFuel[i] = myAssignedFuel.get(i);
+        }
+
+        // now, insertion sort
+
+        Coordinate tmp;
+
+        for (int i = 1; i < assignedKarb.length; i++) {
+            for (int j = i; j > 0; j--) {
+                if (distanceMaps[ourCastleNum][assignedKarb[j].y][assignedKarb[j].x] 
+                    < distanceMaps[ourCastleNum][assignedKarb[j-1].y][assignedKarb[j-1].x]) {
+                    tmp = assignedKarb[j];
+                    assignedKarb[j] = assignedKarb[j-1];
+                    assignedKarb[j-1] = tmp;
+                } else {
+                    break;
+                }
+            }
+        }
+
+        for (int i = 1; i < assignedFuel.length; i++) {
+            for (int j = i; j > 0; j--) {
+                if (distanceMaps[ourCastleNum][assignedFuel[j].y][assignedFuel[j].x] 
+                    < distanceMaps[ourCastleNum][assignedFuel[j-1].y][assignedFuel[j-1].x]) {
+                    tmp = assignedFuel[j];
+                    assignedFuel[j] = assignedFuel[j-1];
+                    assignedFuel[j-1] = tmp;
+                } else {
+                    break;
+                }
+            }
+        }
+
+        myAssignedKarbonite = new ArrayList<Coordinate>();
+        myAssignedFuel = new ArrayList<Coordinate>();
+
+        for (int i = 0; i < assignedKarb.length; i++) {
+            myAssignedKarbonite.add(assignedKarb[i]);
+        }
+
+        for (int i = 0; i < assignedFuel.length; i++) {
+            myAssignedFuel.add(assignedFuel[i]);
+        }
+
+        // for debug only
+        if (DEBUG) {
+            robot.log("Fuel printout:");
+            for (Coordinate c : myAssignedFuel) {
+                robot.log("F:" + c + ": " + distanceMaps[ourCastleNum][c.y][c.x]);
+            }
+            robot.log("Karb printout:");
+            for (Coordinate c : myAssignedKarbonite) {
+                robot.log("K:" + c + ": " + distanceMaps[ourCastleNum][c.y][c.x]);
+            }
         }
     }
 }
