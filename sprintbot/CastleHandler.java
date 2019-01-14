@@ -23,6 +23,10 @@ public class CastleHandler extends RobotHandler
     int numAssignedKarbonite = 0;
     int numAssignedFuel = 0;
 
+    int numPilgrim = 0; 
+
+    int numProphets = 0; 
+    int numCrusaders = 0;
 
     int[][][] distanceMaps;
 
@@ -194,7 +198,10 @@ public class CastleHandler extends RobotHandler
                 else numAssignedFuel++;
 
                 robot.signal((assignedTarget.x << 10) | (assignedTarget.y << 4), 2);
-                return robot.buildUnit(robot.SPECS.PILGRIM, bestDir.dx, bestDir.dy);
+                if (numPilgrim <= 2){
+                    numPilgrim++;
+                    return robot.buildUnit(robot.SPECS.PILGRIM, bestDir.dx, bestDir.dy);
+                }
             }
         }
 
@@ -207,8 +214,18 @@ public class CastleHandler extends RobotHandler
                 robot.castleTalk((robot.me.y << 2) | markerBits);
             }
         }
-        Direction dr = Utils.getRandomDirection(); 
-        return robot.buildUnit(robot.SPECS.PROPHET, dr.dx, dr.dy);
+        if (robot.me.turn >= 10){
+            Direction dr = Utils.getRandomDirection(); 
+            if (numProphets < numCrusaders){
+                numProphets++;
+                return robot.buildUnit(robot.SPECS.PROPHET, dr.dx, dr.dy);
+            }
+            else{
+                numCrusaders++;
+                return robot.buildUnit(robot.SPECS.CRUSADER, dr.dx, dr.dy);
+            }
+        }
+        return null;
     }
 
 
