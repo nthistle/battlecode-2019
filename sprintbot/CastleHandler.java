@@ -25,6 +25,10 @@ public class CastleHandler extends RobotHandler
     int numAssignedKarbonite = 0;
     int numAssignedFuel = 0;
 
+    int numPilgrim = 0; 
+
+    int numProphets = 0; 
+    int numCrusaders = 0;
 
     int[][][] distanceMaps;
 
@@ -138,7 +142,6 @@ public class CastleHandler extends RobotHandler
         if (DEBUG) {
             robot.log("Starting turn #" + robot.me.turn);
         }
-
         if (receivingCastleInfo) {  
             receiveCastleInfo();
         }
@@ -202,7 +205,10 @@ public class CastleHandler extends RobotHandler
                 else numAssignedFuel++;
 
                 robot.signal((assignedTarget.x << 10) | (assignedTarget.y << 4), 2);
-                return robot.buildUnit(robot.SPECS.PILGRIM, bestDir.dx, bestDir.dy);
+                if (numPilgrim <= 2){
+                    numPilgrim++;
+                    return robot.buildUnit(robot.SPECS.PILGRIM, bestDir.dx, bestDir.dy);
+                }
             }
         }
 
@@ -213,6 +219,28 @@ public class CastleHandler extends RobotHandler
                 robot.castleTalk((robot.me.x << 2) | markerBits);
             } else if (robot.me.turn == 2) {
                 robot.castleTalk((robot.me.y << 2) | markerBits);
+            }
+        }
+        if (robot.me.turn >= 10){
+            Direction dr; 
+            for (int i=0; i<10; i++){
+                dr = Utils.getRandomDirection(); 
+                Coordinate n = new Coordinate(robot.me.x + dr.dx, robot.me.y + dr.dy); 
+                if (Utils.isInRange(robot.map, n) && Utils.isPassable(robot.map, n) && !Utils.isOccupied(robot.getVisibleRobotMap(), n)){
+                    break; 
+                }
+            }
+            if (numProphets < numCrusaders){
+                if (robot.karbonite >= 20 && robot.fuel >= 50){
+                    numProphets++;
+                    return robot.buildUnit(robot.SPECS.PROPHET, dr.dx, dr.dy);
+                }
+            }
+            else{
+                if (robot.karbonite >= 25 && robot.fuel >= 50){
+                    numCrusaders++;
+                    return robot.buildUnit(robot.SPECS.CRUSADER, dr.dx, dr.dy);
+                }
             }
         }
         return null;
