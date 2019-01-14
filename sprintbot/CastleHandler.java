@@ -215,14 +215,25 @@ public class CastleHandler extends RobotHandler
             }
         }
         if (robot.me.turn >= 10){
-            Direction dr = Utils.getRandomDirection(); 
+            Direction dr; 
+            for (int i=0; i<10; i++){
+                dr = Utils.getRandomDirection(); 
+                Coordinate n = new Coordinate(robot.me.x + dr.dx, robot.me.y + dr.dy); 
+                if (Utils.isInRange(robot.map, n) && Utils.isPassable(robot.map, n) && !Utils.isOccupied(robot.getVisibleRobotMap(), n)){
+                    break; 
+                }
+            }
             if (numProphets < numCrusaders){
-                numProphets++;
-                return robot.buildUnit(robot.SPECS.PROPHET, dr.dx, dr.dy);
+                if (robot.karbonite >= 20 && robot.fuel >= 50){
+                    numProphets++;
+                    return robot.buildUnit(robot.SPECS.PROPHET, dr.dx, dr.dy);
+                }
             }
             else{
-                numCrusaders++;
-                return robot.buildUnit(robot.SPECS.CRUSADER, dr.dx, dr.dy);
+                if (robot.karbonite >= 25 && robot.fuel >= 50){
+                    numCrusaders++;
+                    return robot.buildUnit(robot.SPECS.CRUSADER, dr.dx, dr.dy);
+                }
             }
         }
         return null;
