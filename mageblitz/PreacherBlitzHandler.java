@@ -107,6 +107,8 @@ public class PreacherBlitzHandler extends RobotHandler
             int bestHits = 0;
             for (int i = -4; i <= 4; i++) { // y
                 for (int j = -4; j <= 4; j++) { // x
+                    if (!Utils.isInRange(robot.map, robot.me.x + j, robot.me.y + i)) continue;
+                    if (Utils.getDistance(0, 0, i, j) > 16) continue;
                     int totalHits = 0;
                     // this is disgustingly inefficient but hopefully fast enough and I'm tired rn
                     for (int k = i-1; k <= i+1; k++) {
