@@ -22,6 +22,7 @@ public class ProphetHandler extends RobotHandler
 
     public Action turn() {
         // first look for closest enemy
+        int usableFuel = (robot.fuel > 60 ? 4 : 2);
         Coordinate myLoc = Coordinate.fromRobot(robot.me);
 
         Robot nearestEnemy = null;
@@ -49,27 +50,33 @@ public class ProphetHandler extends RobotHandler
 
             // path towards the enemy castle (to be implemented: have someone guide the prophet instead of it just blindly moving towards the enemy)
 			if(nearestKitableEnemyDist > 64) {
-				Direction netDir = Utils.followDirectionMap(enemyCastleMap, robot.getVisibleRobotMap(), 4, robot.me.x, robot.me.y);
+				Direction netDir = Utils.followDirectionMap(enemyCastleMap, robot.getVisibleRobotMap(), usableFuel, robot.me.x, robot.me.y);
 				while(netDir.dx==0 && netDir.dy==0) //we're at our target and nothing has happened, so target a new square
 				{
 					int targetX = (int)(Math.random() * (robot.map.length + 0.99999));
 					int targetY = (int)(Math.random() * (robot.map.length + 0.99999));
 					//enemyCastleMap is just the goal we move towards when we have nothing else to do, not actually the enemy castle location
 					enemyCastleMap = Utils.getDirectionMap(robot.map, new Coordinate(targetX, targetY));
-					netDir = Utils.followDirectionMap(enemyCastleMap, robot.getVisibleRobotMap(), 4, robot.me.x, robot.me.y);
+					netDir = Utils.followDirectionMap(enemyCastleMap, robot.getVisibleRobotMap(), usableFuel, robot.me.x, robot.me.y);
 				}
 				return robot.move(netDir.dx, netDir.dy);
 			}
 
 			// otherwise path away from them to kite
             else {
-				Direction netDir = Utils.followDirectionMap(myCastleMap, robot.getVisibleRobotMap(), 4, robot.me.x, robot.me.y);
+				Direction netDir = Utils.followDirectionMap(myCastleMap, robot.getVisibleRobotMap(), usableFuel, robot.me.x, robot.me.y);
             	return robot.move(netDir.dx, netDir.dy);
 			}
         }
 
 		//this should be the same as "path towards them"
-        Direction d = Utils.followDirectionMap(enemyCastleMap, robot.getVisibleRobotMap(), 4, robot.me.x, robot.me.y);
+        Direction d = Utils.followDirectionMap(enemyCastleMap, robot.getVisibleRobotMap(), usableFuel, robot.me.x, robot.me.y);
+
+        int ctr = 0;
+        while (d.equals(Utils.STATIONARY) && (ctr++) < 10) {
+            d = Utils.followDirectionMapFuzz(enemyCastleMap, robot.getVisibleRobotMap(), usableFuel, robot.me.x, robot.me.y);
+        }
+
         return robot.move(d.dx, d.dy);
     }
 }

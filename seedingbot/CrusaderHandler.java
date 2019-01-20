@@ -17,6 +17,8 @@ public class CrusaderHandler extends RobotHandler
 
     public Action turn() {
         // first look for closest enemy
+        int usableFuel = (robot.fuel > 90 ? 9 : (robot.fuel > 50 ? 4 : 2));
+
         Coordinate myLoc = Coordinate.fromRobot(robot.me);
 
         Robot nearestEnemy = null;
@@ -41,11 +43,16 @@ public class CrusaderHandler extends RobotHandler
             // path towards them, could be slightly time-intensive, but 64^2 is pretty trivial
             Direction[][] targetMap = Utils.getDirectionMap(robot.map, nearestEnemy.x, nearestEnemy.y);
 
-            Direction netDir = Utils.followDirectionMap(targetMap, robot.getVisibleRobotMap(), 9, robot.me.x, robot.me.y);
+            Direction netDir = Utils.followDirectionMap(targetMap, robot.getVisibleRobotMap(), usableFuel, robot.me.x, robot.me.y);
             return robot.move(netDir.dx, netDir.dy);
         }
 
-        Direction d = Utils.followDirectionMap(presumedMap, robot.getVisibleRobotMap(), 9, robot.me.x, robot.me.y);
+        Direction d = Utils.followDirectionMap(presumedMap, robot.getVisibleRobotMap(), usableFuel, robot.me.x, robot.me.y);
+
+        int ctr = 0;
+        while (d.equals(Utils.STATIONARY) && (ctr++) < 10) {
+            d = Utils.followDirectionMapFuzz(presumedMap, robot.getVisibleRobotMap(), usableFuel, robot.me.x, robot.me.y);
+        }
         // Direction d = Utils.getRandomDirection();
         return robot.move(d.dx, d.dy);
     }

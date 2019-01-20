@@ -156,6 +156,8 @@ public class CastleHandler extends RobotHandler
                 robot.log("I have been assigned " + myAssignedKarbonite.size() + " karb and " + myAssignedFuel.size() + " fuel");
             }
         }
+        Coordinate myLoc = Coordinate.fromRobot(robot.me);
+        
         boolean builtUnitThisTurn = false;
         // NOTE: if you spawn a unit on your first turn as a castle (probably not pilgrim, since those
         // will need to be assigned), you MUST set this boolean so other castles don't get confused
@@ -185,7 +187,6 @@ public class CastleHandler extends RobotHandler
             int minDist = 5000;
             Direction bestDir = null;
 
-            Coordinate myLoc = Coordinate.fromRobot(robot.me);
 
             for (Direction dir : Utils.dir8) {
                 Coordinate n = myLoc.add(dir);
