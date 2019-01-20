@@ -243,6 +243,26 @@ public class CastleHandler extends RobotHandler
                 }
             }
         }
+
+
+        if (robot.fuel >= 10) {
+            Direction closestEnemy = null;
+            int closestDistance = -1;
+
+            for (Robot r : robot.getVisibleRobots()) {
+                if (robot.isVisible(r) && r.team != robot.me.team) {
+                    int tdist = Utils.getDistance(Coordinate.fromRobot(r), myLoc);
+                    if (closestEnemy == null || tdist < closestDistance) {
+                        closestEnemy = myLoc.directionTo(Coordinate.fromRobot(r));
+                        closestDistance = tdist;
+                    }
+                }
+            }
+            if (closestEnemy != null) {
+                return robot.attack(closestEnemy.dx, closestEnemy.dy);
+            }
+        }
+
         return null;
     }
 

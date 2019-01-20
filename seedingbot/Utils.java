@@ -226,6 +226,10 @@ public class Utils
         return a < b ? a : b;
     }
 
+    public static int abs(int a) {
+        return a > 0 ? a : -a;
+    }
+
     // TODO: add explicit horizontal symmetry and specific case logic
     // for both horizontal and vertical symmetry (low priority)
     public static boolean checkVerticalSymmetry(boolean[][] m) {
@@ -247,6 +251,45 @@ public class Utils
         return symmetry ? new Coordinate(map[c.y].length - 1 - c.x, c.y) : new Coordinate(c.x, map.length - 1 - c.y);
     }
 
+    // returns a map where true means it's on "our side"
+    public static boolean[][] getTerritoryMap(boolean[][] map, Coordinate knownFriendly, boolean symmetry) {
+        boolean[][] territoryMap = new boolean[map.length][map[0].length];
+        for (int i = 0; i < map.length; i++) {
+            for (int j = 0; j < map[i].length; j++) {
+                territoryMap[i][j] = false;
+            }
+        }
+        if (symmetry) {
+            if (knownFriendly.x < (map[0].length/2)) {
+                for (int i = 0; i < map.length; i++) {
+                    for (int j = 0; j < (map[0].length/2); j++) {
+                        territoryMap[i][j] = true;
+                    }
+                }
+            } else {
+                for (int i = 0; i < map.length; i++) {
+                    for (int j = (map[0].length/2); j < map[0].length; j++) {
+                        territoryMap[i][j] = true;
+                    }
+                }
+            }
+        } else {
+            if (knownFriendly.y < (map.length/2)) {
+                for (int i = 0; i < (map.length/2); i++) {
+                    for (int j = 0; j < map[0].length; j++) {
+                        territoryMap[i][j] = true;
+                    }
+                }
+            } else {
+                for (int i = (map.length/2); i < map.length; i++) {
+                    for (int j = 0; j < map[0].length; j++) {
+                        territoryMap[i][j] = true;
+                    }
+                }
+            }
+        }
+        return territoryMap;
+    }
 }
 
 class Direction
@@ -261,6 +304,15 @@ class Direction
 
     public Direction reverse() {
         return new Direction(-this.dx, -this.dy);
+    }
+
+    // normalizes to 4 cardinal, 
+    public Direction normalize() {
+        if (Utils.abs(dx) > Utils.abs(dy)) { // x is dominant
+            return new Direction(dx/Utils.abs(dx),0);
+        } else { // y is dominant
+            return new Direction(0,dy/Utils.abs(dy));
+        }
     }
 
     public boolean equals(Object other) {
@@ -298,6 +350,10 @@ class Coordinate
 
     public Direction dirTo(Coordinate c) {
         return new Direction(c.x - this.x, c.y - this.y);
+    }
+
+    public Direction directionTo(Coordinate c) {
+        return this.dirTo(c);
     }
 
     public boolean equals(Object other) {
