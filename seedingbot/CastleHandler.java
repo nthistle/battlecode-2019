@@ -208,8 +208,8 @@ public class CastleHandler extends RobotHandler
 
         if (robot.me.turn >= 10) {
             Direction dr; 
-            for (int i=0; i<10; i++){
-                dr = Utils.getRandomDirection(); 
+            for (int i=0; i<20; i++){
+                dr = Utils.getRandom8Direction(); 
                 Coordinate n = new Coordinate(robot.me.x + dr.dx, robot.me.y + dr.dy); 
                 if (Utils.isInRange(robot.map, n) && Utils.isPassable(robot.map, n) && !Utils.isOccupied(robot.getVisibleRobotMap(), n)){
                     break; 
@@ -224,7 +224,8 @@ public class CastleHandler extends RobotHandler
             else{
                 if (robot.karbonite >= 25 && robot.fuel >= 50){
                     numCrusaders++;
-                    return robot.buildUnit(robot.SPECS.CRUSADER, dr.dx, dr.dy);
+                    //return robot.buildUnit(robot.SPECS.CRUSADER, dr.dx, dr.dy);
+                    return robot.buildUnit(robot.SPECS.PROPHET, dr.dx, dr.dy);
                 }
             }
         }

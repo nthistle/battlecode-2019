@@ -14,7 +14,7 @@ public class MyRobot extends BCAbstractRobot {
             } else if (me.unit == SPECS.PILGRIM) {
                 this.myHandler = new PilgrimHandler(this);
             } else if (me.unit == SPECS.PROPHET){
-                this.myHandler = new ProphetHandler(this); 
+                this.myHandler = new LatticeProphetHandler(this); 
             }
 
             // Calls handler setup method
