@@ -32,6 +32,10 @@ public class CastleHandler extends RobotHandler
 
     int[][][] distanceMaps;
 
+    boolean[] clusterAssignments = {true, false, true}; // then, numAssignedTotal % 2 == 1
+    int numAssignedTotal = 0;
+    int numTransmitted = 0;
+
     boolean DEBUG = false; // more time intensive when printing
 
     public void setup() {
@@ -162,58 +166,6 @@ public class CastleHandler extends RobotHandler
         // NOTE: if you spawn a unit on your first turn as a castle (probably not pilgrim, since those
         // will need to be assigned), you MUST set this boolean so other castles don't get confused
 
-
-        // E C O
-        // this has a bias towards castle earlier in turnq but ignore it for now
-        // 52 because we need 2 fuel to broadcast its destination
-        if (hasSymmetricAssigned && robot.karbonite >= 10 && robot.fuel >= 52 && (numAssignedKarbonite < myAssignedKarbonite.size() || numAssignedFuel < myAssignedFuel.size())) {
-            // fetch next location to assign
-            boolean isKarb;
-            if (numAssignedKarbonite < myAssignedKarbonite.size() && numAssignedFuel < myAssignedFuel.size()) {
-                isKarb = numAssignedKarbonite <= numAssignedFuel;
-            } else if (numAssignedKarbonite < myAssignedKarbonite.size()) {
-                isKarb = true;
-            } else {
-                isKarb = false;
-            }
-
-            Coordinate assignedTarget = (isKarb ? myAssignedKarbonite : myAssignedFuel).get(isKarb ? numAssignedKarbonite : numAssignedFuel);
-
-            if (DEBUG) {
-                robot.log("Doing assignment of " + (isKarb ? "KARBONITE" : "FUEL") + " at location " + assignedTarget);
-            }
-
-            int[][] tDistMap = Utils.getDistanceMap(robot.map, assignedTarget);
-            int minDist = 5000;
-            Direction bestDir = null;
-
-
-            for (Direction dir : Utils.dir8) {
-                Coordinate n = myLoc.add(dir);
-                if (Utils.isInRange(robot.map, n) && Utils.isPassable(robot.map, n) && !Utils.isOccupied(robot.getVisibleRobotMap(), n)) {
-                    if (tDistMap[n.y][n.x] < minDist) {
-                        minDist = tDistMap[n.y][n.x];
-                        bestDir = dir;
-                    }
-                }
-            }
-
-            // for some reason, we're completely blocked, so no build this turn
-            if (bestDir != null) {
-                // this is the best direction to build in
-
-                if (isKarb) numAssignedKarbonite++;
-                else numAssignedFuel++;
-
-                robot.signal((assignedTarget.x << 10) | (assignedTarget.y << 4), 2);
-                if (numPilgrim <= 2){
-                    numPilgrim++;
-                    return robot.buildUnit(robot.SPECS.PILGRIM, bestDir.dx, bestDir.dy);
-                }
-            }
-        }
-
-
         if (robot.me.turn <= 2) {
             int markerBits = builtUnitThisTurn ? 3 : 1;
             if (robot.me.turn == 1) {
@@ -222,7 +174,39 @@ public class CastleHandler extends RobotHandler
                 robot.castleTalk((robot.me.y << 2) | markerBits);
             }
         }
-        if (robot.me.turn >= 10){
+
+
+        // E C O
+        // this has a bias towards castle earlier in turnq but ignore it for now
+        // 52 because we need 2 fuel to broadcast its destination
+        if (hasSymmetricAssigned && robot.karbonite >= 10 && robot.fuel >= 52 &&
+            ((numPilgrim < 2) || (numPilgrim < 4 && robot.me.turn > 40) || (numPilgrim < 6 && robot.me.turn > 100)) &&
+            (numAssignedKarbonite < myAssignedKarbonite.size() || numAssignedFuel < myAssignedFuel.size())) {
+            Action act = attemptSpawnPilgrim();
+            if (act != null) {
+                return act;
+            }
+        }
+
+        // only castle #0 sends this out
+        if (hasSymmetricAssigned && ourCastleNum == 0 && numTransmitted < numCastles) { // it'd be nice if we didn't have to transmit ourselves, but I'm lazy
+
+            robot.log("Trying to transmit castle locs...");
+
+            int tReq = getFullTransmitStrength();
+            int reqFuel = (int)(0.1+Math.ceil(Math.sqrt(tReq)));
+            // here we transmit all castle locs
+            if (robot.fuel > 10 + reqFuel) {
+                Coordinate toSendLoc = new Coordinate(castleX[numTransmitted], castleY[numTransmitted]);
+                toSendLoc = Utils.getReflected(robot.map, toSendLoc, mapSymmetry);
+                robot.log("Transmitted a location!");
+                robot.signal((toSendLoc.y << 10) | (toSendLoc.x << 4) | 1, tReq);
+                numTransmitted += 1;
+            }
+        }
+
+
+        if (robot.me.turn >= 10) {
             Direction dr; 
             for (int i=0; i<10; i++){
                 dr = Utils.getRandomDirection(); 
@@ -262,6 +246,64 @@ public class CastleHandler extends RobotHandler
             if (closestEnemy != null) {
                 return robot.attack(closestEnemy.dx, closestEnemy.dy);
             }
+        }
+
+        return null;
+    }
+
+    // something transmitted at this r^2 will broadcast to every unit on the map
+    public int getFullTransmitStrength() {
+        Coordinate c1 = new Coordinate(0,0);
+        Coordinate c2 = new Coordinate(0,robot.map.length);
+        Coordinate c3 = new Coordinate(robot.map.length,0);
+        Coordinate c4 = new Coordinate(robot.map.length,robot.map.length);
+        Coordinate m = Coordinate.fromRobot(robot.me);
+        return Utils.max(Utils.max(Utils.getDistance(c1, m), Utils.getDistance(c2, m)), Utils.max(Utils.getDistance(c3, m), Utils.getDistance(c4, m)));
+    }
+
+    // runs up to 1 BFS
+    // REQUIRES SIGNALING!
+    public Action attemptSpawnPilgrim() {
+        Coordinate myLoc = Coordinate.fromRobot(robot.me);
+
+        // fetch next location to assign
+        boolean isKarb = numAssignedTotal < clusterAssignments.length ? clusterAssignments[numAssignedTotal] : (numAssignedTotal % 2 == 1);
+        if (numAssignedKarbonite >= myAssignedKarbonite.size()) isKarb = false;
+        if (numAssignedFuel >= myAssignedFuel.size()) isKarb = true; 
+
+        Coordinate assignedTarget = (isKarb ? myAssignedKarbonite : myAssignedFuel).get(isKarb ? numAssignedKarbonite : numAssignedFuel);
+
+        if (DEBUG) {
+            robot.log("Doing assignment of " + (isKarb ? "KARBONITE" : "FUEL") + " at location " + assignedTarget);
+        }
+
+        int[][] tDistMap = Utils.getDistanceMap(robot.map, assignedTarget);
+        int minDist = 5000;
+        Direction bestDir = null;
+
+
+        for (Direction dir : Utils.dir8) {
+            Coordinate n = myLoc.add(dir);
+            if (Utils.isInRange(robot.map, n) && Utils.isPassable(robot.map, n) && !Utils.isOccupied(robot.getVisibleRobotMap(), n)) {
+                if (tDistMap[n.y][n.x] < minDist) {
+                    minDist = tDistMap[n.y][n.x];
+                    bestDir = dir;
+                }
+            }
+        }
+
+        // for some reason, we're completely blocked, so no build this turn
+        if (bestDir != null) {
+            // this is the best direction to build in
+
+            if (isKarb) numAssignedKarbonite++;
+            else numAssignedFuel++;
+
+            numPilgrim++;
+            numAssignedTotal++;
+
+            robot.signal((assignedTarget.x << 10) | (assignedTarget.y << 4), 2);
+            return robot.buildUnit(robot.SPECS.PILGRIM, bestDir.dx, bestDir.dy);
         }
 
         return null;

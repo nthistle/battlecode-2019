@@ -10,19 +10,32 @@ public class ProphetHandler extends RobotHandler
     boolean mapSymmetry;
     int origX, origY;
     Direction[][] enemyCastleMap, myCastleMap;
+    Coordinate myCastle;
+    Coordinate myTarget;
 
     public void setup() {
 		origX = robot.me.x;
 		origY = robot.me.y;
+        myCastle = Coordinate.fromRobot(findMyCastle());
         mapSymmetry = Utils.getSymmetry(robot.map, robot.karboniteMap, robot.fuelMap);
-        // TODO: for now we just target our reflected spawn loc, in future actually use presumed enemy castle loc
-        myCastleMap = Utils.getDirectionMap(robot.map, Coordinate.fromRobot(robot.me));
-        enemyCastleMap = Utils.getDirectionMap(robot.map, Utils.getReflected(robot.map, Coordinate.fromRobot(robot.me), mapSymmetry));
+        myCastleMap = Utils.getDirectionMap(robot.map, myCastle);
+        myTarget = Utils.getReflected(robot.map, myCastle, mapSymmetry);
+        enemyCastleMap = Utils.getDirectionMap(robot.map, myTarget);
+    }
+
+    // lazy and just finds first, but whatever
+    public Robot findMyCastle() {
+        for (Robot r : robot.getVisibleRobots()) {
+            if (robot.isVisible(r) && r.team == robot.me.team && r.unit == robot.SPECS.CASTLE
+                && Utils.getDistance(r.x, r.y, robot.me.x, robot.me.y) <= 2) {
+                return r;
+            }
+        }
     }
 
     public Action turn() {
         // first look for closest enemy
-        int usableFuel = (robot.fuel > 60 ? 4 : 2);
+        int usableFuel = (robot.fuel > 100 ? 4 : 2);
         Coordinate myLoc = Coordinate.fromRobot(robot.me);
 
         Robot nearestEnemy = null;
@@ -41,6 +54,24 @@ public class ProphetHandler extends RobotHandler
             }
         }
 
+        if (Utils.getDistance(myLoc, myTarget) <= 64) {
+            int tid = robot.getVisibleRobotMap()[myTarget.y][myTarget.x];
+            if (tid != -1) {
+                if (tid == 0 || robot.getRobot(tid).team == robot.me.team) {
+                    // reassign new location
+                    // for now, rando
+                    int ctr = 0;
+                    do {
+                        myTarget = new Coordinate((int)(Math.random() * robot.map[0].length), (int)(Math.random() * robot.map.length));
+                    } while (!robot.map[myTarget.y][myTarget.x] && (ctr++)<20);
+                    if (!robot.map[myTarget.y][myTarget.x]) {
+                        myTarget = myCastle; // just go home at this point tbh
+                    }
+                    enemyCastleMap = Utils.getDirectionMap(robot.map, myTarget);
+                }
+            }
+        }
+
         if (nearestEnemy != null) {
 
 			//the enemy is not too close (or you can't kite back more), so attack
@@ -51,14 +82,14 @@ public class ProphetHandler extends RobotHandler
             // path towards the enemy castle (to be implemented: have someone guide the prophet instead of it just blindly moving towards the enemy)
 			if(nearestKitableEnemyDist > 64) {
 				Direction netDir = Utils.followDirectionMap(enemyCastleMap, robot.getVisibleRobotMap(), usableFuel, robot.me.x, robot.me.y);
-				while(netDir.dx==0 && netDir.dy==0) //we're at our target and nothing has happened, so target a new square
+				/*while(netDir.dx==0 && netDir.dy==0) //we're at our target and nothing has happened, so target a new square
 				{
 					int targetX = (int)(Math.random() * (robot.map.length + 0.99999));
 					int targetY = (int)(Math.random() * (robot.map.length + 0.99999));
 					//enemyCastleMap is just the goal we move towards when we have nothing else to do, not actually the enemy castle location
 					enemyCastleMap = Utils.getDirectionMap(robot.map, new Coordinate(targetX, targetY));
 					netDir = Utils.followDirectionMap(enemyCastleMap, robot.getVisibleRobotMap(), usableFuel, robot.me.x, robot.me.y);
-				}
+				}*/ // tarker this code is mega ass wtf are you doing
 				return robot.move(netDir.dx, netDir.dy);
 			}
 

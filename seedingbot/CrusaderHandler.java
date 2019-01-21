@@ -7,17 +7,32 @@ public class CrusaderHandler extends RobotHandler
     }
 
     boolean mapSymmetry;
-    Direction[][] presumedMap;
+    Direction[][] presumedMap, myCastleMap;
+    Coordinate myCastle;
+    Coordinate myTarget;
 
     public void setup() {
+        myCastle = Coordinate.fromRobot(findMyCastle());
         mapSymmetry = Utils.getSymmetry(robot.map, robot.karboniteMap, robot.fuelMap);
         // TODO: for now we just target our reflected spawn loc, in future actually use presumed enemy castle loc
-        presumedMap = Utils.getDirectionMap(robot.map, Utils.getReflected(robot.map, Coordinate.fromRobot(robot.me), mapSymmetry));
+        myTarget = Utils.getReflected(robot.map, myCastle, mapSymmetry);
+        myCastleMap = Utils.getDirectionMap(robot.map, myCastle);
+        presumedMap = Utils.getDirectionMap(robot.map, myTarget);
+    }
+
+    // lazy and just finds first, but whatever
+    public Robot findMyCastle() {
+        for (Robot r : robot.getVisibleRobots()) {
+            if (robot.isVisible(r) && r.team == robot.me.team && r.unit == robot.SPECS.CASTLE
+                && Utils.getDistance(r.x, r.y, robot.me.x, robot.me.y) <= 2) {
+                return r;
+            }
+        }
     }
 
     public Action turn() {
         // first look for closest enemy
-        int usableFuel = (robot.fuel > 90 ? 9 : (robot.fuel > 50 ? 4 : 2));
+        int usableFuel = (robot.fuel > 150 ? 9 : (robot.fuel > 85 ? 4 : 2));
 
         Coordinate myLoc = Coordinate.fromRobot(robot.me);
 
@@ -29,6 +44,24 @@ public class CrusaderHandler extends RobotHandler
                 if (nearestEnemy == null || Utils.getDistance(myLoc, Coordinate.fromRobot(r)) < nearestDist) {
                     nearestEnemy = r;
                     nearestDist = Utils.getDistance(myLoc, Coordinate.fromRobot(r));
+                }
+            }
+        }
+
+        if (Utils.getDistance(myLoc, myTarget) <= 49) {
+            int tid = robot.getVisibleRobotMap()[myTarget.y][myTarget.x];
+            if (tid != -1) {
+                if (tid == 0 || robot.getRobot(tid).team == robot.me.team) {
+                    // reassign new location
+                    // for now, rando
+                    int ctr = 0;
+                    do {
+                        myTarget = new Coordinate((int)(Math.random() * robot.map[0].length), (int)(Math.random() * robot.map.length));
+                    } while (!robot.map[myTarget.y][myTarget.x] && (ctr++)<20);
+                    if (!robot.map[myTarget.y][myTarget.x]) {
+                        myTarget = myCastle; // just go home at this point tbh
+                    }
+                    presumedMap = Utils.getDirectionMap(robot.map, myTarget);
                 }
             }
         }
