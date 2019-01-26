@@ -36,7 +36,7 @@ public class PilgrimHandler extends RobotHandler
         for (Robot r : robot.getVisibleRobots()) {
 
             //check if this robot is a castle on my team
-            if (r.team == robot.me.team && r.unit == robot.SPECS.CASTLE) {
+            if (r.team == robot.me.team && (r.unit == robot.SPECS.CASTLE || r.unit == robot.SPECS.CHURCH)) {
 
                 //if the castle is the closer than the current closest, update it
                 if ((castleLocation == null || Utils.getDistance(myLoc, Coordinate.fromRobot(r)) < closestCastleDistance)

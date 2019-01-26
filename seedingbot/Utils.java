@@ -51,6 +51,32 @@ public class Utils
         return getDirectionMap(terrain, c.x, c.y);
     }
 
+    public static Direction[][] getDirectionMap8(boolean[][] terrain, int x, int y) {
+        Direction[][] dirMap = new Direction[terrain.length][terrain[0].length];
+
+        LinkedList<Coordinate> queue = new LinkedList<Coordinate>();
+        queue.add(new Coordinate(x, y));
+        dirMap[y][x] = Utils.STATIONARY;
+
+        while (queue.size() > 0) {
+            Coordinate c = queue.poll();
+
+            for (Direction dir : dir8) {
+                Coordinate n = c.add(dir);
+                if (isInRange(terrain, n) && isPassable(terrain, n) && dirMap[n.y][n.x] == null) {
+                    dirMap[n.y][n.x] = dir.reverse();
+                    queue.add(n);
+                }
+            }
+        }
+
+        return dirMap;
+    }
+
+    public static Direction[][] getDirectionMap8(boolean[][] terrain, Coordinate c) {
+        return getDirectionMap8(terrain, c.x, c.y);
+    }
+
     public static int[][] getDistanceMap(boolean[][] terrain, int x, int y) {
         int[][] distMap = new int[terrain.length][terrain[0].length];
 
