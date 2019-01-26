@@ -392,3 +392,15 @@ class Coordinate
         return "(" + x + "," + y + ")";
     }
 }
+
+// just used for places where we have to be able to modify a,b
+class Pair
+{
+    public int x;
+    public int y;
+
+    public Pair(int x, int y) {
+        this.x = x;
+        this.y = y;
+    }
+}
