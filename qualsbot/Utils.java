@@ -203,6 +203,14 @@ public class Utils
         }
     }
 
+    public static void setStationary(Direction[][] dirMap, int x, int y, int xR, int yR) {
+        for (int yT = Utils.max(0, y - yR); yT < Utils.min(dirMap.length, y + yR + 1); yT++) {
+            for (int xT = Utils.max(0, x - xR); xT < Utils.min(dirMap[0].length, x + xR + 1); xT++) {
+                dirMap[yT][xT] = STATIONARY;
+            }
+        }
+    }
+
     // Random from 4-directions (r2 distance 1)
     public static Direction getRandomDirection() {
         return directions[(int)(Math.random() * directions.length)];

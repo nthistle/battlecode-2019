@@ -21,6 +21,7 @@ public class CastleHandler extends RobotHandler
     boolean mapSymmetry;
 
     ArrayList<Cluster> clusters;
+    ArrayList<Cluster> combativeClusters; // pretty close to enemy/us
 
     ArrayList<Coordinate> myAssignedKarbonite;
     ArrayList<Coordinate> myAssignedFuel;
@@ -143,6 +144,8 @@ public class CastleHandler extends RobotHandler
         mapSymmetry = Utils.getSymmetry(robot.map, robot.karboniteMap, robot.fuelMap);
     }
 
+    Coordinate myLoc;
+
 
     public Action turn() {
         if (DEBUG) {
@@ -162,14 +165,11 @@ public class CastleHandler extends RobotHandler
                 robot.log("I have been assigned " + myAssignedKarbonite.size() + " karb and " + myAssignedFuel.size() + " fuel");
             }
         }
-        Coordinate myLoc = Coordinate.fromRobot(robot.me);
-        
-        boolean builtUnitThisTurn = false;
-        // NOTE: if you spawn a unit on your first turn as a castle (probably not pilgrim, since those
-        // will need to be assigned), you MUST set this boolean so other castles don't get confused
+        myLoc = Coordinate.fromRobot(robot.me);
 
         if (robot.me.turn <= 2) {
-            int markerBits = builtUnitThisTurn ? 3 : 1;
+            //int markerBits = builtUnitThisTurn ? 3 : 1;
+            int markerBits = 1;
             if (robot.me.turn == 1) {
                 robot.castleTalk((robot.me.x << 2) | markerBits);
             } else if (robot.me.turn == 2) {
@@ -177,6 +177,12 @@ public class CastleHandler extends RobotHandler
             }
         }
 
+        if (robot.me.turn <= 10) {
+            Action a = doEarlyGamePilgrimSpawn();
+            if (a != null) return a;
+        }
+
+        /*
 
         // E C O
         // this has a bias towards castle earlier in turnq but ignore it for now
@@ -230,8 +236,26 @@ public class CastleHandler extends RobotHandler
                     return robot.buildUnit(robot.SPECS.PROPHET, dr.dx, dr.dy);
                 }
             }
+        }*/
+
+        return doCastleAttack();
+    }
+
+    boolean hasSpawnedCombatCP = false;
+
+    public Action doEarlyGamePilgrimSpawn() {
+        if (numCastles == 1) {
+            if (combativeClusters.size() > 0) {
+
+            }
+        } else {
+
         }
 
+        return null;
+    }
+
+    public Action doCastleAttack() {
 
         if (robot.fuel >= 10) {
             Direction closestEnemy = null;
@@ -390,8 +414,23 @@ public class CastleHandler extends RobotHandler
         }
 
         robot.log("Found these clusters:");
+
+        combativeClusters = new ArrayList<Cluster>();
         for (Cluster c : clusters) {
             robot.log("Cluster: " + c);
+            boolean isCombative = true;
+            for (int i = 0; i < numCastles; i++) {
+                refl = Utils.getReflected(robot.map, new Coordinate(c.x, c.y), mapSymmetry);
+                if (Utils.abs(distanceMaps[i][c.y][c.x] - distanceMaps[i][refl.y][refl.x]) > 4) {
+                    isCombative = false;
+                    break;
+                }
+            }
+
+            if (isCombative) {
+                combativeClusters.add(c);
+                robot.log(" ^ IS COMBATIVE");
+            }
         }
     }
 
