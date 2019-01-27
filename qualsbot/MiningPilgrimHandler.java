@@ -23,12 +23,19 @@ public class MiningPilgrimHandler extends RobotHandler
     int idleTurns = 0;
     boolean headingBack = false;
 
+    int sinceLastHomeUpdate = 15;
+
+    Coordinate myLocation;
+
     // TODO: reassign to closest church 
     public Action turn() {
         if (robot.fuel < 1) return null;
 
-        Coordinate myLocation = Coordinate.fromRobot(robot.me);
+        myLocation = Coordinate.fromRobot(robot.me);
         int usableFuel = (robot.fuel < 75 ? 2 : 4);
+
+        if (robot.me.turn % 5 == 0 && sinceLastHomeUpdate >= 15) updateHomeCheck();
+        if (sinceLastHomeUpdate < 15) sinceLastHomeUpdate++;
 
         // if we're empty, then we've finished our dropoff, head back out to mine
         if (headingBack && (robot.me.fuel == 0 && robot.me.karbonite == 0)) {
@@ -96,6 +103,27 @@ public class MiningPilgrimHandler extends RobotHandler
             return robot.move(dir.dx, dir.dy);
         }
 
+    }
+
+    public void updateHomeCheck() {
+        if (sinceLastHomeUpdate < 15) return;
+
+        if (Utils.getDistance(myLocation, homeCastle) <= 2) return;
+
+        for (Direction d : Utils.dir8) {
+            Coordinate n = myLocation.add(d);
+            if (Utils.isInRange(robot.map, n) && robot.getVisibleRobotMap()[n.y][n.x] > 0) {
+                Robot possHome = robot.getRobot(robot.getVisibleRobotMap()[n.y][n.x]);
+                if (possHome.team == robot.me.team && (possHome.unit == robot.SPECS.CHURCH || possHome.unit == robot.SPECS.CASTLE)) {
+                    homeCastle = Coordinate.fromRobot(possHome);
+                    homeMap = Utils.getDirectionMap8(robot.map, homeCastle);
+                    Utils.setStationary(homeMap, homeCastle.x, homeCastle.y, 1, 1);
+                    sinceLastHomeUpdate = 0;
+                    robot.log("We updated home! -> " + homeCastle);
+                    return;
+                }
+            }
+        }
     }
 
     // TODO: scan for enemies, so we run back to drop off if in danger

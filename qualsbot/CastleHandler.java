@@ -177,7 +177,7 @@ public class CastleHandler extends RobotHandler
             }
         }
 
-        if (robot.me.turn <= 10) {
+        if ((hasSymmetricAssigned || robot.me.turn > 5) && robot.me.turn <= 10) {
             Action a = doEarlyGamePilgrimSpawn();
             if (a != null) return a;
         }

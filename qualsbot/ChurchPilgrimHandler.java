@@ -12,6 +12,7 @@ public class ChurchPilgrimHandler extends RobotHandler
     }
 
     Coordinate originalLocation;
+    Coordinate myLocation;
 
     Direction[][] clusterMap; // map to cluster destination
 
@@ -30,7 +31,7 @@ public class ChurchPilgrimHandler extends RobotHandler
         if (builtMyChurch) return null;
         if (robot.fuel < 5) return null;
 
-        Coordinate myLocation = Coordinate.fromRobot(robot.me);
+        myLocation = Coordinate.fromRobot(robot.me);
 
         int usableFuel = (robot.fuel < 75 ? 2 : 4);
 

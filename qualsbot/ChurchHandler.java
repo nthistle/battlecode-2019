@@ -24,7 +24,7 @@ public class ChurchHandler extends RobotHandler
                     break;
                 }
             }
-            if (r.team == robot.me.team && r.unit == robot.SPECS.CHURCH && Utils.getDistance(r.x, r.y, robot.me.x, robot.me.y) <= 9) {
+            if (r.id != robot.me.id && r.team == robot.me.team && r.unit == robot.SPECS.CHURCH && Utils.getDistance(r.x, r.y, robot.me.x, robot.me.y) <= 9) {
                 firstChurch = false;
             }
         }
@@ -32,12 +32,11 @@ public class ChurchHandler extends RobotHandler
 
         // we have to assess our cluster state
         if (firstChurch) {
+            robot.log("I am the first church");
             boolean[][] marked = new boolean[robot.map.length][robot.map[0].length];
-            seenDudes = new int[robot.map.length][robot.map[0].length];
             for (int y = 0; y < marked.length; y++) {
                 for (int x = 0; x < marked[y].length; x++) {
                     marked[y][x] = false;
-                    seenDudes[y][x] = 1000;
                 }
             }
 
@@ -54,6 +53,13 @@ public class ChurchHandler extends RobotHandler
                         clusterize(marked, robot.karboniteMap, robot.fuelMap, co.x, co.y, 0);
                     }
                 }
+            }
+        }
+        
+        seenDudes = new int[robot.map.length][robot.map[0].length];
+        for (int y = 0; y < seenDudes.length; y++) {
+            for (int x = 0; x < seenDudes[y].length; x++) {
+                seenDudes[y][x] = 1000;
             }
         }
     }
@@ -113,14 +119,16 @@ public class ChurchHandler extends RobotHandler
                         a = attemptBuildChurcher();
                         if (a != null) {
                             sinceLastChurchBuild = 0;
+                            numPilgrimsBuilt++;
                             return a;
                         }
                     }
                 }
-                if (robot.karbonite >= 10 && robot.fuel >= 52 && sinceLastAssign >= 9) {
+                if (robot.karbonite >= 10 && robot.fuel >= 52 && sinceLastAssign >= 9 && (numPilgrimsBuilt < (1.5 * myCluster.size()))) {
                     a = attemptBuildMiner();
                     if (a != null) {
                         sinceLastAssign = 0;
+                        numPilgrimsBuilt++;
                         return a;
                     }
                 }
@@ -138,8 +146,8 @@ public class ChurchHandler extends RobotHandler
                 seenDudes[r.y][r.x] = 0;
             }
         }
-        for (int y = Utils.max(0, robot.me.y - 5); y < Utils.min(map.length, robot.me.y + 6); y++) {
-            for (int x = Utils.max(0, robot.me.x - 5); x < Utils.min(map.length, robot.me.x + 6); x++) {
+        for (int y = Utils.max(0, robot.me.y - 5); y < Utils.min(robot.map.length, robot.me.y + 6); y++) {
+            for (int x = Utils.max(0, robot.me.x - 5); x < Utils.min(robot.map.length, robot.me.x + 6); x++) {
                 seenDudes[y][x] += 1;
             }
         }
@@ -177,7 +185,7 @@ public class ChurchHandler extends RobotHandler
         ctr = 0;
 
         Direction bd = myLocation.directionTo(target).normalize();
-        while ((!Utils.isInRange(robot.map, myLocation.add(bd)) || !robot.map[myLocation.y + bd.dy][myLocation.x + bd.dx] || seenDudes[myLocation.y + bd.dy][myLocation.x + bd.dx] < 3
+        while ((!Utils.isInRange(robot.map, myLocation.add(bd)) || !robot.map[myLocation.y + bd.dy][myLocation.x + bd.dx] || seenDudes[myLocation.y + bd.dy][myLocation.x + bd.dx] > 5
             || robot.getVisibleRobotMap()[myLocation.y + bd.dy][myLocation.x + bd.dx] != 0) && (ctr++) < 10) {
             bd = Utils.dir8[(int)(Math.random() * 8)];
         }
