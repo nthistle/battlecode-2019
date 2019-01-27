@@ -148,6 +148,7 @@ public class CastleHandler extends RobotHandler
 
 
     public Action turn() {
+        myLoc = Coordinate.fromRobot(robot.me);
         if (DEBUG) {
             robot.log("Starting turn #" + robot.me.turn);
         }
@@ -165,7 +166,6 @@ public class CastleHandler extends RobotHandler
                 robot.log("I have been assigned " + myAssignedKarbonite.size() + " karb and " + myAssignedFuel.size() + " fuel");
             }
         }
-        myLoc = Coordinate.fromRobot(robot.me);
 
         if (robot.me.turn <= 2) {
             //int markerBits = builtUnitThisTurn ? 3 : 1;
@@ -241,11 +241,39 @@ public class CastleHandler extends RobotHandler
         return doCastleAttack();
     }
 
+    int numLocalSpawned = 0;
     boolean hasSpawnedCombatCP = false;
 
     public Action doEarlyGamePilgrimSpawn() {
+        Action a;
         if (numCastles == 1) {
             if (combativeClusters.size() > 0) {
+
+                if (numLocalSpawned < 1) {
+                    a = attemptSpawnPilgrim(true);
+                    if (a != null) {
+                        numLocalSpawned += 1;
+                    }
+                    return a;
+                }
+
+                if (!hasSpawnedCombatCP) {
+                    Cluster closestCCluster = null;
+                    int closestDist = 5000;
+                    for (Cluster c : combativeClusters) {
+                        if (distanceMaps[ourCastleNum][c.y][c.x] < closestDist) {
+                            closestDist = distanceMaps[ourCastleNum][c.y][c.x];
+                            closestCCluster = c;
+                        }
+                    }
+                    a = attemptSpawnChurchPilgrim(closestCCluster, true);
+                    if (a != null) {
+                        hasSpawnedCombatCP = true;
+                    }
+                    return a;
+                }
+
+            } else {
 
             }
         } else {
@@ -288,15 +316,60 @@ public class CastleHandler extends RobotHandler
         return Utils.max(Utils.max(Utils.getDistance(c1, m), Utils.getDistance(c2, m)), Utils.max(Utils.getDistance(c3, m), Utils.getDistance(c4, m)));
     }
 
+    public Action attemptSpawnChurchPilgrim(Cluster c, boolean aggro) {
+        if (!(robot.karbonite >= 10 && robot.fuel >= 50)) return null;
+
+        Coordinate dest = chooseChurchHome(c);
+        int[][] tDistMap = Utils.getDistanceMap(robot.map, dest);
+        int minDist = 5000;
+        Direction bestDir = null;
+
+        for (Direction dir : Utils.dir8) {
+            Coordinate n = myLoc.add(dir);
+            if (Utils.isInRange(robot.map, n) && Utils.isPassable(robot.map, n) && !Utils.isOccupied(robot.getVisibleRobotMap(), n)) {
+                if (tDistMap[n.y][n.x] < minDist) {
+                    minDist = tDistMap[n.y][n.x];
+                    bestDir = dir;
+                }
+            }
+        }
+
+        if (bestDir != null) {
+            robot.signal((dest.x << 10) | (dest.y << 4) | (aggro ? 13 : 5), 2);
+            return robot.buildUnit(robot.SPECS.PILGRIM, bestDir.dx, bestDir.dy);
+        }
+        return null; // OOF
+    }
+
+    public Coordinate chooseChurchHome(Cluster c) {
+        for (Direction d : Utils.dir9) {
+            Coordinate co = new Coordinate(c.x + d.dx, c.y + d.dy);
+            if (Utils.isInRange(robot.map, co) && robot.map[co.y][co.x] && !robot.fuelMap[co.y][co.x] && !robot.karboniteMap[co.y][co.x]) {
+                return co;
+            }
+        }
+        for (Direction d : Utils.dir21) {
+            Coordinate co = new Coordinate(c.x + d.dx, c.y + d.dy);
+            if (Utils.isInRange(robot.map, co) && robot.map[co.y][co.x] && !robot.fuelMap[co.y][co.x] && !robot.karboniteMap[co.y][co.x]) {
+                return co;
+            }
+        }
+        return null;
+    }
+
     // runs up to 1 BFS
     // REQUIRES SIGNALING!
     public Action attemptSpawnPilgrim() {
-        Coordinate myLoc = Coordinate.fromRobot(robot.me);
-
         // fetch next location to assign
         boolean isKarb = numAssignedTotal < clusterAssignments.length ? clusterAssignments[numAssignedTotal] : (numAssignedTotal % 2 == 1);
         if (numAssignedKarbonite >= myAssignedKarbonite.size()) isKarb = false;
         if (numAssignedFuel >= myAssignedFuel.size()) isKarb = true; 
+
+        return attemptSpawnPilgrim(isKarb);
+    }
+
+    public Action attemptSpawnPilgrim(boolean isKarb) {
+        if (!(robot.karbonite >= 10 && robot.fuel >= 50)) return null;
 
         Coordinate assignedTarget = (isKarb ? myAssignedKarbonite : myAssignedFuel).get(isKarb ? numAssignedKarbonite : numAssignedFuel);
 
@@ -329,7 +402,7 @@ public class CastleHandler extends RobotHandler
             numPilgrim++;
             numAssignedTotal++;
 
-            robot.signal((assignedTarget.x << 10) | (assignedTarget.y << 4), 2);
+            robot.signal((assignedTarget.x << 10) | (assignedTarget.y << 4) | 7, 2);
             return robot.buildUnit(robot.SPECS.PILGRIM, bestDir.dx, bestDir.dy);
         }
 
