@@ -12,9 +12,11 @@ public class MyRobot extends BCAbstractRobot {
             } else if (me.unit == SPECS.CRUSADER) {
                 this.myHandler = new CrusaderHandler(this);
             } else if (me.unit == SPECS.PILGRIM) {
-                this.myHandler = parsePilgrimType(); //new PilgrimHandler(this);
-            } else if (me.unit == SPECS.PROPHET){
+                this.myHandler = this.parsePilgrimType(); //new PilgrimHandler(this);
+            } else if (me.unit == SPECS.PROPHET) {
                 this.myHandler = new LatticeProphetHandler(this); 
+            } else if (me.unit == SPECS.CHURCH) {
+                this.myHandler = new ChurchHandler(this);
             }
 
             // Calls handler setup method
