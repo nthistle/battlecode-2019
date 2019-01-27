@@ -22,7 +22,12 @@ public class MyRobot extends BCAbstractRobot {
         }
 
         // Handler turn method
-        return this.myHandler.turn();
+        if (this.myHandler == null) {
+            log("I have no handler!");
+            return null;
+        } else {
+            return this.myHandler.turn();
+        }
     }
 
     public RobotHandler parsePilgrimType() {
@@ -53,6 +58,9 @@ public class MyRobot extends BCAbstractRobot {
 
         if ((closestCastle.signal & 7) == 7) {
             // mining pilgrim handler XXXXXX|YYYYYY|_111
+            int targetX = (closestCastle.signal >> 10) & 63;
+            int targetY = (closestCastle.signal >>  4) & 63;
+            return new MiningPilgrimHandler(this, new Coordinate(targetX, targetY), Coordinate.fromRobot(closestCastle));
         } else if ((closestCastle.signal & 7) == 5) {
             // church pilgrim handler XXXXXX|YYYYYY|A101
             // A = aggressive?
