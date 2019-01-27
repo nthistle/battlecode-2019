@@ -20,7 +20,7 @@ public class CastleHandler extends RobotHandler
 
     boolean mapSymmetry;
 
-    ArrayList<Coordinate> clusters;
+    ArrayList<Cluster> clusters;
 
     ArrayList<Coordinate> myAssignedKarbonite;
     ArrayList<Coordinate> myAssignedFuel;
@@ -367,45 +367,47 @@ public class CastleHandler extends RobotHandler
             }
         }
 
-        clusters = new ArrayList<Coordinate>();
+        clusters = new ArrayList<Cluster>();
 
         for (int y = 0; y < robot.map.length; y++) {
             for (int x = 0; x < robot.map[y].length; x++) {
                 if (!marked[y][x] && (robot.karboniteMap[y][x] || robot.fuelMap[y][x])) {
+
                     marked[y][x] = true;
-                    Pair running = new Pair(x, y);
-                    int count = 1 + clusterize(running, marked, robot.karboniteMap, robot.fuelMap, x, y, 0);
-                    Coordinate clusterCentroid = new Coordinate((int)(0.5 + ((float)running.x) / count),
-                                                                (int)(0.5 + ((float)running.y) / count));
-                    if (robot.map[clusterCentroid.y][clusterCentroid.x]) {
-                        clusters.add(clusterCentroid);
+                    Cluster cluster = new Cluster(x, y);
+                    clusterize(cluster, marked, robot.karboniteMap, robot.fuelMap, x, y, 0);
+
+                    cluster.x = (int)(0.5 + ((float)cluster.x)/cluster.count);
+                    cluster.y = (int)(0.5 + ((float)cluster.y)/cluster.count);
+
+                    if (robot.map[cluster.y][cluster.x]) {
+                        clusters.add(cluster);
                     } else {
-                        robot.log("UNEXPECTED BEHAVIOR CENTROID: " + clusterCentroid);
+                        robot.log("UNEXPECTED BEHAVIOR CENTROID: " + cluster);
                     }
                 }
             }
         }
 
         robot.log("Found these clusters:");
-        for (Coordinate c : clusters) {
+        for (Cluster c : clusters) {
             robot.log("Cluster: " + c);
         }
     }
 
-    public int clusterize(Pair running, boolean[][] markedMap, boolean[][] karbMap, boolean[][] fuelMap, int x, int y, int depth) {
+    public int clusterize(Cluster running, boolean[][] markedMap, boolean[][] karbMap, boolean[][] fuelMap, int x, int y, int depth) {
         if (depth > 15) return 0;
-        int cnt = 0;
         for (int i = -2; i <= 2; i++) {
             for (int j = -2; j <= 2; j++) {
                 if ((y+i > 0 && y+i < markedMap.length && x+j > 0 && x+j < markedMap[0].length) && !markedMap[y+i][x+j] && (karbMap[y+i][x+j] || fuelMap[y+i][x+j])) {
                     markedMap[y+i][x+j] = true;
                     running.x += x + j;
                     running.y += y + i;
-                    cnt += 1 + clusterize(running, markedMap, karbMap, fuelMap, x + j, y + i, depth + 1);
+                    running.count += 1;
+                    clusterize(running, markedMap, karbMap, fuelMap, x + j, y + i, depth + 1);
                 }
             }
         }
-        return cnt;
     }
 
 

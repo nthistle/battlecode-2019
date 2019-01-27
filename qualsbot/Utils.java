@@ -393,14 +393,25 @@ class Coordinate
     }
 }
 
-// just used for places where we have to be able to modify a,b
-class Pair
+class Cluster
 {
     public int x;
     public int y;
+    public int count;
 
-    public Pair(int x, int y) {
+    public Cluster(int x, int y) {
         this.x = x;
         this.y = y;
+        this.count = 1;
+    }
+
+    public Cluster(int x, int y, int count) {
+        this.x = x;
+        this.y = y;
+        this.count = count;
+    }
+
+    public String toString() {
+        return "{(" + x + "," + y + ")," + count + "}";
     }
 }
