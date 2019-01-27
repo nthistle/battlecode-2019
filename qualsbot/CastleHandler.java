@@ -342,13 +342,15 @@ public class CastleHandler extends RobotHandler
     }
 
     public Coordinate chooseChurchHome(Cluster c) {
-        for (Direction d : Utils.dir9) {
+        Utils.shuffleArray(Utils.dir9volatile);
+        for (Direction d : Utils.dir9volatile) {
             Coordinate co = new Coordinate(c.x + d.dx, c.y + d.dy);
             if (Utils.isInRange(robot.map, co) && robot.map[co.y][co.x] && !robot.fuelMap[co.y][co.x] && !robot.karboniteMap[co.y][co.x]) {
                 return co;
             }
         }
-        for (Direction d : Utils.dir21) {
+        Utils.shuffleArray(Utils.dir21volatile);
+        for (Direction d : Utils.dir21volatile) {
             Coordinate co = new Coordinate(c.x + d.dx, c.y + d.dy);
             if (Utils.isInRange(robot.map, co) && robot.map[co.y][co.x] && !robot.fuelMap[co.y][co.x] && !robot.karboniteMap[co.y][co.x]) {
                 return co;
