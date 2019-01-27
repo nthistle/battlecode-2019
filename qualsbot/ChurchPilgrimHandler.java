@@ -2,7 +2,7 @@ package bc19;
 
 public class ChurchPilgrimHandler extends RobotHandler 
 {
-    Coordinate clusterDestination;
+    public Coordinate clusterDestination;
     boolean isAggro;
 
     public ChurchPilgrimHandler(MyRobot robot, Coordinate target, boolean isAggro) {
@@ -37,8 +37,9 @@ public class ChurchPilgrimHandler extends RobotHandler
         if (Utils.getDistance(myLocation, clusterDestination) <= 2) {
             Direction buildDir = myLocation.directionTo(clusterDestination);
             if (robot.getVisibleRobotMap()[clusterDestination.y][clusterDestination.x] == 0 &&
-                   robot.karbonite >= 50 && robot.fuel >= 200) {
+                   robot.karbonite >= 50 && robot.fuel >= 202) {
                 builtMyChurch = true;
+                if (isAggro) robot.signal(80, 2);
                 return robot.buildUnit(robot.SPECS.CHURCH, buildDir.dx, buildDir.dy);
             } else {
                 return null;
