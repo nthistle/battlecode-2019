@@ -23,12 +23,32 @@ public class MyRobot extends BCAbstractRobot {
             this.myHandler.setup();
         }
 
+        if (this.myHandler instanceof ChurchPilgrimHandler) {
+            if (((ChurchPilgrimHandler)this.myHandler).builtMyChurch) {
+                this.myHandler = this.reassignPilgrimToMiner();
+                this.myHandler.setup();
+            }
+        }
+
         // Handler turn method
         if (this.myHandler == null) {
             log("I have no handler!");
             return null;
         } else {
             return this.myHandler.turn();
+        }
+    }
+
+    public RobotHandler reassignPilgrimToMiner() {
+        // let's pick random fuel/karb cluster nearby
+        Coordinate myLoc = Coordinate.fromRobot(me);
+        Utils.shuffleArray(Utils.dir21volatile);
+        Coordinate p;
+        for (Direction d : Utils.dir21volatile) {
+            p = myLoc.add(d);
+            if (Utils.isInRange(map, p) && (karboniteMap[p.y][p.x] || fuelMap[p.y][p.x])) {
+                return new MiningPilgrimHandler(this, p, ((ChurchPilgrimHandler)this.myHandler).clusterDestination);
+            }
         }
     }
 

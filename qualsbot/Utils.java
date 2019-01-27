@@ -14,11 +14,6 @@ public class Utils
         new Direction(-1, 0), new Direction(-1, -1), new Direction(0, -1),
         new Direction(1, -1)};
 
-    public static final Direction[] dir8volatile = {new Direction(1, 0),
-        new Direction(1, 1), new Direction(0, 1), new Direction(-1, 1),
-        new Direction(-1, 0), new Direction(-1, -1), new Direction(0, -1),
-        new Direction(1, -1)};
-
     public static final Direction[] dir8o = {new Direction(1, 0),
         new Direction(0, 1), new Direction(-1, 0), new Direction(0, -1),
         new Direction(1, 1), new Direction(-1, 1), new Direction(-1, -1),
@@ -27,6 +22,11 @@ public class Utils
     public static final Direction STATIONARY = new Direction(0, 0);
 
     public static final Direction[] dir9 = {STATIONARY, new Direction(1, 0),
+        new Direction(1, 1), new Direction(0, 1), new Direction(-1, 1),
+        new Direction(-1, 0), new Direction(-1, -1), new Direction(0, -1),
+        new Direction(1, -1)};
+
+    public static final Direction[] dir9volatile = {STATIONARY, new Direction(1, 0),
         new Direction(1, 1), new Direction(0, 1), new Direction(-1, 1),
         new Direction(-1, 0), new Direction(-1, -1), new Direction(0, -1),
         new Direction(1, -1)};

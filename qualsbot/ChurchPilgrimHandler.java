@@ -15,7 +15,7 @@ public class ChurchPilgrimHandler extends RobotHandler
 
     Direction[][] clusterMap; // map to cluster destination
 
-    boolean builtMyChurch = false;
+    public boolean builtMyChurch = false;
 
     public void setup() {
 
