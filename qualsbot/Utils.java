@@ -31,6 +31,17 @@ public class Utils
         new Direction(-1, 0), new Direction(-1, -1), new Direction(0, -1),
         new Direction(1, -1)};
 
+    public static final Direction[] dir8volatile = {new Direction(1, 0),
+        new Direction(1, 1), new Direction(0, 1), new Direction(-1, 1),
+        new Direction(-1, 0), new Direction(-1, -1), new Direction(0, -1),
+        new Direction(1, -1)};
+
+    public static final Direction[] dir12volatile = {new Direction(1, 0),
+        new Direction(1, 1), new Direction(0, 1), new Direction(-1, 1),
+        new Direction(-1, 0), new Direction(-1, -1), new Direction(0, -1),
+        new Direction(1, -1), new Direction(2, 0), new Direction(0, 2),
+        new Direction(-2, 0), new Direction(0, -2)};
+
     public static final Direction[] dir21volatile = {new Direction(0, 0), new Direction(-1, 0),
         new Direction(1, 0), new Direction(0, -1), new Direction(0, 1), new Direction(-1, -1),
         new Direction(1, 1), new Direction(-1, 1), new Direction(1, -1), new Direction(-2, 0),
@@ -369,6 +380,10 @@ class Direction
         } else { // y is dominant
             return new Direction(0,dy/Utils.abs(dy));
         }
+    }
+
+    public int dot(Direction other) {
+        return this.dx * other.dx + this.dy * other.dy;
     }
 
     public boolean equals(Object other) {

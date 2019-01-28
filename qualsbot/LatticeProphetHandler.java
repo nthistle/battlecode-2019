@@ -42,12 +42,14 @@ public class LatticeProphetHandler extends RobotHandler
     // lazy and just finds first, but whatever
     public Robot findMyCastle() {
         for (Robot r : robot.getVisibleRobots()) {
-            if (robot.isVisible(r) && r.team == robot.me.team && r.unit == robot.SPECS.CASTLE
+            if (robot.isVisible(r) && r.team == robot.me.team && (r.unit == robot.SPECS.CASTLE || r.unit == robot.SPECS.CHURCH)
                 && Utils.getDistance(r.x, r.y, robot.me.x, robot.me.y) <= 2) {
                 return r;
             }
         }
     }
+
+    int idleTurns = 0;
 
     public Action turn() {
         // robot.log ("LOCATION: " + robot.me.x + " " + robot.me.y);
@@ -64,7 +66,7 @@ public class LatticeProphetHandler extends RobotHandler
 				int dist = Utils.getDistance(myLoc, Coordinate.fromRobot(r));
 				if(r.unit != robot.SPECS.CRUSADER && r.unit != robot.SPECS.PILGRIM && r.unit != robot.SPECS.PROPHET)
 					nearestKitableEnemyDist = Math.min(nearestKitableEnemyDist, dist);
-                if (nearestEnemy == null || dist < nearestDist) {
+                if (nearestEnemy == null || dist < nearestDist && dist >= 16) { // ignore enemies within this range, hope someone else kills them for us
                     nearestEnemy = r;
                     nearestDist = dist;
                 }
@@ -89,15 +91,65 @@ public class LatticeProphetHandler extends RobotHandler
             }
         }
         */
-        if (nearestEnemy != null && nearestDist <= 64) {
+        if (nearestEnemy != null && nearestDist <= 64 && nearestDist >= 16) {
             // attack the nearest enemy. 
             // TODO: Instead of attacking nearest enemy, attack non pilgrim enemies first.
             return robot.attack(nearestEnemy.x - robot.me.x, nearestEnemy.y - robot.me.y);
         }
         
-        if ((robot.me.x + robot.me.y) % 2 == 0){ // sum of coordinates is even
+        // make sure our location right now is valid
+        if ((robot.me.x + robot.me.y) % 2 == 0 && canMove(robot.me.x, robot.me.y)){ // sum of coordinates is even
             return null; // we're already where we need to be. 
         }
+
+        Direction towardsHome = myLoc.directionTo(myCastle);
+
+        Utils.shuffleArray(Utils.dir8volatile);
+
+        Coordinate n;
+
+        for (Direction d : Utils.dir8volatile) {
+            if (d.dot(towardsHome) <= 0) {
+                n = myLoc.add(d);
+                if (Utils.isInRange(robot.map, n) && robot.map[n.y][n.x] && robot.getVisibleRobotMap()[n.y][n.x] == 0 && ((n.x + n.y) % 2 == 0)) {
+                    idleTurns = 0;
+                    return robot.move(d.dx, d.dy);
+                }
+            }
+        }
+
+        for (Direction d : Utils.dir8volatile) {
+            if (d.dot(towardsHome) <= 0) {
+                n = myLoc.add(d);
+                if (Utils.isInRange(robot.map, n) && robot.map[n.y][n.x] && robot.getVisibleRobotMap()[n.y][n.x] == 0) {
+                    idleTurns = 0;
+                    return robot.move(d.dx, d.dy);
+                }
+            }
+        }
+
+        idleTurns++;
+        Utils.shuffleArray(Utils.dir12volatile);
+
+        int bestDot = 10000;
+        Direction bestDir = Utils.STATIONARY;
+
+        for (Direction d : Utils.dir12volatile) {
+            n = myLoc.add(d);
+            if (Utils.isInRange(robot.map, n) && robot.map[n.y][n.x] && robot.getVisibleRobotMap()[n.y][n.x] == 0) {
+                if (d.dot(towardsHome) < bestDot) {
+                    bestDot = d.dot(towardsHome);
+                    bestDir = d;
+                }
+            }
+        }
+
+        if (bestDir.equals(Utils.STATIONARY)) return null;
+
+        return robot.move(bestDir.dx, bestDir.dy);
+
+        /*
+
 
         for (int i=0; i<4; i++){ // check 4 neighboring squares and see if we can move on to them
             int new_x = Utils.directions[i].dx + robot.me.x; 
@@ -128,16 +180,27 @@ public class LatticeProphetHandler extends RobotHandler
         }
         int choice = (int)(Math.random() * direcs.size()); // pick one of the open direcs
         Direction toGo = direcs.get(choice);
-        return robot.move(toGo.dx, toGo.dy); 
+        return robot.move(toGo.dx, toGo.dy); */
     }
-    boolean canMove (int new_x, int new_y){
-        if (Utils.isInRange(robot.map, new_x, new_y) && Utils.isPassable(robot.map, new_x, new_y)){ // make sure its in range and on a passable square
-                if (!Utils.isPassable(robot.karboniteMap, new_x, new_y) && !Utils.isPassable(robot.fuelMap, new_x, new_y)){ // make sure we're not on a karbonite or fuel deposit
-                    if (!Utils.isOccupied(robot.getVisibleRobotMap(), new_x, new_y)){ // make sure we're not on other robots
-                        return true; 
+
+    public boolean canMove (int new_x, int new_y) {
+        if (!Utils.isInRange(robot.map, new_x, new_y)) return false;
+        if (!Utils.isPassable(robot.map, new_x, new_y)) return false;
+        if (robot.karboniteMap[new_y][new_x] || robot.fuelMap[new_y][new_x]) return false;
+        //;if (Utils.isOccupied(robot.getVisibleRobotMap(), new_x, new_y)) return false;
+
+        Coordinate c = new Coordinate(new_x, new_y);
+        for (Direction d : Utils.dir8) {
+            Coordinate n = c.add(d);
+            if (Utils.isInRange(robot.map, n)) {
+                int tid = robot.getVisibleRobotMap()[n.y][n.x];
+                if (tid > 0) {
+                    if (robot.getRobot(tid).team == robot.me.team && (robot.getRobot(tid).unit == robot.SPECS.CHURCH || robot.getRobot(tid).unit == robot.SPECS.CASTLE)) {
+                        return false;
                     }
                 }
+            }
         }
-        return false; 
+        return true;
     }
 }

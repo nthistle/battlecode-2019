@@ -77,6 +77,8 @@ public class MiningPilgrimHandler extends RobotHandler
             else idleTurns = 0;
 
             if (dir.equals(Utils.STATIONARY)) return null;
+            
+            if (!robot.map[robot.me.y + dir.dy][robot.me.x + dir.dx]) return null;
 
             return robot.move(dir.dx, dir.dy);
 
@@ -97,8 +99,12 @@ public class MiningPilgrimHandler extends RobotHandler
                 if (robot.karboniteMap[robot.me.y][robot.me.x] || robot.fuelMap[robot.me.y][robot.me.x]) {
                     // as long as we're stuck here...
                     return robot.mine();
+                } else {
+                    return null;
                 }
             }
+
+            if (!robot.map[robot.me.y + dir.dy][robot.me.x + dir.dx]) return null;
 
             return robot.move(dir.dx, dir.dy);
         }

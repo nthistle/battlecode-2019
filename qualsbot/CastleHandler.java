@@ -39,6 +39,8 @@ public class CastleHandler extends RobotHandler
     int numAssignedTotal = 0;
     int numTransmitted = 0;
 
+    boolean weSpawnChurch = true;
+
     boolean DEBUG = false; // more time intensive when printing
 
     public void setup() {
@@ -144,11 +146,29 @@ public class CastleHandler extends RobotHandler
         mapSymmetry = Utils.getSymmetry(robot.map, robot.karboniteMap, robot.fuelMap);
     }
 
-    Coordinate myLoc;
+    public Action attemptBuildProphet() {
+        if (!(robot.karbonite >= 25 && robot.fuel >= 50)) return null;
 
+        int ctr = 0;
+        Direction bd = Utils.dir8[(int)(Math.random() * 8)];
+        Coordinate buildLoc = myLocation.add(bd);
+        while ((!Utils.isInRange(robot.map, buildLoc) || robot.getVisibleRobotMap()[buildLoc.y][buildLoc.x] != 0) && (ctr++)<10) {
+            bd = Utils.dir8[(int)(Math.random() * 8)];
+            buildLoc = myLocation.add(bd);
+        }
+
+        if (ctr >= 10) return null;
+
+        return robot.buildUnit(robot.SPECS.PROPHET, bd.dx, bd.dy);
+    }
+
+    Coordinate myLoc;
+    Coordinate myLocation;
 
     public Action turn() {
         myLoc = Coordinate.fromRobot(robot.me);
+        myLocation = myLoc;
+
         if (DEBUG) {
             robot.log("Starting turn #" + robot.me.turn);
         }
@@ -177,8 +197,13 @@ public class CastleHandler extends RobotHandler
             }
         }
 
-        if ((hasSymmetricAssigned || robot.me.turn > 5) && robot.me.turn <= 10) {
+        if ((hasSymmetricAssigned || robot.me.turn > 5) && robot.me.turn <= 30) {
             Action a = doEarlyGamePilgrimSpawn();
+            if (a != null) return a;
+        }
+
+        if (robot.me.turn > 30) {
+            Action a = doMidGameSpawning();
             if (a != null) return a;
         }
 
@@ -241,12 +266,54 @@ public class CastleHandler extends RobotHandler
         return doCastleAttack();
     }
 
+    int numProd = 0;
+    int sinceSpawn = 1000;
+    int tcc = 0;
+
+    public Action doMidGameSpawning() {
+        sinceSpawn++;
+        if (robot.me.turn < 200 || (robot.me.turn < 300 && robot.map.length > 50)) { // lengthen phase if bigger map
+            if (Math.random() < 0.4 && sinceSpawn > 35) {// spawn random church pilgrim lol
+                //robot.log("not a gnoblin");
+                Cluster randCluster = clusters.get((int)(Math.random() * clusters.size()));
+                Coordinate refl = Utils.getReflected(robot.map, new Coordinate(randCluster.x, randCluster.y), mapSymmetry);
+                int ctr = 0;
+                while ((Utils.getDistance(myLocation, new Coordinate(randCluster.x, randCluster.y)) < 4 ||
+                    distanceMaps[ourCastleNum][refl.y][refl.x] <= distanceMaps[ourCastleNum][randCluster.y][randCluster.x]) && (ctr++)<10) {
+                    randCluster = clusters.get((int)(Math.random() * clusters.size()));
+                    refl = Utils.getReflected(robot.map, new Coordinate(randCluster.x, randCluster.y), mapSymmetry);
+                }
+
+                if (ctr >= 10) return null;
+
+                //robot.log("trying to spawn");
+                sinceSpawn = 0;
+                return attemptSpawnChurchPilgrim(randCluster, false);
+            } else if (Math.random() < 0.5 && numProd < 4) {
+
+                Action a = attemptSpawnPilgrim(Math.random() > 0.5);
+                if (a != null) {
+                    numProd ++;
+                    return a;
+                }
+            } else if (Math.random() < 0.2 && tcc < 8 && robot.karbonite > 100) {
+                tcc ++;
+                return attemptBuildProphet();
+            } 
+        } else if (robot.me.turn < 800) {
+            return attemptBuildProphet();
+        } else {
+            return null; //TODO : BUILD CRUSADERS!!!
+        }
+    }
+
     int numLocalSpawned = 0;
     boolean hasSpawnedCombatCP = false;
 
     public Action doEarlyGamePilgrimSpawn() {
         Action a;
-        if (numCastles == 1) {
+        //if (numCastles == 1) {
+        if (weSpawnChurch) {
             if (combativeClusters.size() > 0) {
 
                 if (numLocalSpawned < 1) {
@@ -275,10 +342,44 @@ public class CastleHandler extends RobotHandler
 
             } else {
 
+
+                if (numLocalSpawned < 1) {
+                    a = attemptSpawnPilgrim(true);
+                    if (a != null) {
+                        numLocalSpawned += 1;
+                    }
+                    return a;
+                }
+
+                if (!hasSpawnedCombatCP) {
+                    Cluster closestCCluster = null;
+                    int closestDist = 5000;
+                    for (Cluster c : clusters) {
+                        if (distanceMaps[ourCastleNum][c.y][c.x] < closestDist) {
+                            closestDist = distanceMaps[ourCastleNum][c.y][c.x];
+                            closestCCluster = c;
+                        }
+                    }
+                    a = attemptSpawnChurchPilgrim(closestCCluster, true);
+                    if (a != null) {
+                        hasSpawnedCombatCP = true;
+                    }
+                    return a;
+                }
+
             }
         } else {
-
+            if (robot.me.turn > 7) {
+                a = attemptSpawnPilgrim(Math.random() < 0.6);
+                if (a != null) {
+                    numLocalSpawned += 1;
+                }
+                return a;
+            }
         }
+        //} else {
+//
+        //}
 
         return null;
     }
@@ -319,6 +420,7 @@ public class CastleHandler extends RobotHandler
     public Action attemptSpawnChurchPilgrim(Cluster c, boolean aggro) {
         if (!(robot.karbonite >= 10 && robot.fuel >= 50)) return null;
 
+        //robot.log("POINT 1");
         Coordinate dest = chooseChurchHome(c);
         int[][] tDistMap = Utils.getDistanceMap(robot.map, dest);
         int minDist = 5000;
@@ -333,6 +435,8 @@ public class CastleHandler extends RobotHandler
                 }
             }
         }
+        //robot.log("POINT 2");
+        //robot.log("it's " + bestDir);
 
         if (bestDir != null) {
             robot.signal((dest.x << 10) | (dest.y << 4) | (aggro ? 13 : 5), 2);
@@ -375,9 +479,9 @@ public class CastleHandler extends RobotHandler
 
         Coordinate assignedTarget = (isKarb ? myAssignedKarbonite : myAssignedFuel).get(isKarb ? numAssignedKarbonite : numAssignedFuel);
 
-        if (DEBUG) {
+        /*if (DEBUG) {
             robot.log("Doing assignment of " + (isKarb ? "KARBONITE" : "FUEL") + " at location " + assignedTarget);
-        }
+        }*/
 
         int[][] tDistMap = Utils.getDistanceMap(robot.map, assignedTarget);
         int minDist = 5000;
@@ -482,17 +586,17 @@ public class CastleHandler extends RobotHandler
                     if (robot.map[cluster.y][cluster.x]) {
                         clusters.add(cluster);
                     } else {
-                        robot.log("UNEXPECTED BEHAVIOR CENTROID: " + cluster);
+                        //robot.log("UNEXPECTED BEHAVIOR CENTROID: " + cluster);
                     }
                 }
             }
         }
 
-        robot.log("Found these clusters:");
+        //robot.log("Found these clusters:");
 
         combativeClusters = new ArrayList<Cluster>();
         for (Cluster c : clusters) {
-            robot.log("Cluster: " + c);
+            //robot.log("Cluster: " + c);
             boolean isCombative = true;
             for (int i = 0; i < numCastles; i++) {
                 refl = Utils.getReflected(robot.map, new Coordinate(c.x, c.y), mapSymmetry);
@@ -504,7 +608,18 @@ public class CastleHandler extends RobotHandler
 
             if (isCombative) {
                 combativeClusters.add(c);
-                robot.log(" ^ IS COMBATIVE");
+                //robot.log(" ^ IS COMBATIVE");
+            }
+        }
+
+        if (combativeClusters.size() > 0 && numCastles > 1) {
+            Cluster cint = combativeClusters.get(0);
+            for (int cnum = 0; cnum < numCastles; cnum++) {
+                if (cnum == ourCastleNum) continue;
+                if (distanceMaps[cnum][cint.y][cint.x] < distanceMaps[ourCastleNum][cint.y][cint.x]) {
+                    weSpawnChurch = false;
+                    break;
+                }
             }
         }
     }
