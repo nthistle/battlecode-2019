@@ -162,6 +162,22 @@ public class CastleHandler extends RobotHandler
         return robot.buildUnit(robot.SPECS.PROPHET, bd.dx, bd.dy);
     }
 
+    public Action attemptBuildCrusader() {
+        if (!(robot.karbonite >= 25 && robot.fuel >= 50)) return null;
+
+        int ctr = 0;
+        Direction bd = Utils.dir8[(int)(Math.random() * 8)];
+        Coordinate buildLoc = myLocation.add(bd);
+        while ((!Utils.isInRange(robot.map, buildLoc) || robot.getVisibleRobotMap()[buildLoc.y][buildLoc.x] != 0) && (ctr++)<10) {
+            bd = Utils.dir8[(int)(Math.random() * 8)];
+            buildLoc = myLocation.add(bd);
+        }
+
+        if (ctr >= 10) return null;
+
+        return robot.buildUnit(robot.SPECS.CRUSADER, bd.dx, bd.dy);
+    }
+
     Coordinate myLoc;
     Coordinate myLocation;
 
@@ -303,7 +319,7 @@ public class CastleHandler extends RobotHandler
         } else if (robot.me.turn < 800) {
             return attemptBuildProphet();
         } else {
-            return null; //TODO : BUILD CRUSADERS!!!
+            return attemptBuildCrusader(); //TODO : BUILD CRUSADERS!!!
         }
     }
 
